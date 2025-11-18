@@ -1,0 +1,29 @@
+# Test coverage
+coverage-*.out
+*.out
+
+# Build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go workspace file
+go.work
+
+# Binaries
+examples/examples
+examples/main
+examples/protobuf/protobuf
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
