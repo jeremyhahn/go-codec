@@ -10,7 +10,8 @@ import (
 	yamlcodec "github.com/jeremyhahn/go-codec/pkg/yaml"
 )
 
-// New creates a new codec of the specified type
+// New creates a new codec of the specified type.
+// Returns an error if the codec type is not supported.
 func New[T any](codecType Type) (Codec[T], error) {
 	switch codecType {
 	case JSON:

@@ -27,3 +27,4 @@ examples/protobuf/protobuf
 # OS
 .DS_Store
 Thumbs.db
+ci.log
