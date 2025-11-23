@@ -21,7 +21,8 @@ func main() {
 		Email: "john@example.com",
 	}
 
-	fmt.Println("=== Codec Demo ===\n")
+	fmt.Println("=== Codec Demo ===")
+	fmt.Println()
 
 	// JSON
 	fmt.Println("--- JSON ---")

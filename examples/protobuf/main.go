@@ -15,7 +15,8 @@ func main() {
 		Email: "john@example.com",
 	}
 
-	fmt.Println("=== Protocol Buffers Codec Demo ===\n")
+	fmt.Println("=== Protocol Buffers Codec Demo ===")
+	fmt.Println()
 
 	// Create a Protocol Buffers codec
 	// Note: Must use codec.NewProtoBuf instead of codec.New for protobuf types
