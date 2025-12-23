@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.1.2-alpha] - 2024-12-22
+## [1.2.0] - 2024-12-22
 
 ### Added
 - **Avro codec** with automatic schema inference from Go types
@@ -22,14 +22,14 @@ All notable changes to this project will be documented in this file.
 - Root-level `factory.go` and `protobuf_factory.go` (moved to `pkg/factory`)
 - `API_REFERENCE.md` (consolidated into `docs/`)
 
-## [0.1.1-alpha] - 2024-11-23
+## [1.1.0] - 2024-11-23
 
 ### Added
 - Buffer reuse optimization (`MarshalTo`, `AppendMarshal`, `UnmarshalFrom`)
 - CI/CD pipeline with GitHub Actions
 - Security scanning with gosec and govulncheck
 
-## [0.1.0-alpha] - 2024-11-22
+## [1.0.0] - 2024-11-22
 
 ### Added
 - Initial release
