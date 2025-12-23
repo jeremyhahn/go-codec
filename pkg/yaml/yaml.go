@@ -15,14 +15,13 @@ func New[T any]() *Codec[T] {
 }
 
 // Encode serializes the given data to the writer using YAML
-func (c *Codec[T]) Encode(w io.Writer, data T) (err error) {
+func (c *Codec[T]) Encode(w io.Writer, data T) error {
 	encoder := yaml.NewEncoder(w)
-	defer func() {
-		if closeErr := encoder.Close(); closeErr != nil && err == nil {
-			err = closeErr
-		}
-	}()
-	return encoder.Encode(data)
+	if err := encoder.Encode(data); err != nil {
+		_ = encoder.Close()
+		return err
+	}
+	return encoder.Close()
 }
 
 // Decode deserializes YAML data from the reader into the provided type

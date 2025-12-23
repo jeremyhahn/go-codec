@@ -31,6 +31,11 @@ func TestPutBytesBuffer_LargeBuffer(t *testing.T) {
 	// Should not panic, but won't actually pool the buffer
 }
 
+func TestPutBytesBuffer_Nil(t *testing.T) {
+	// Should not panic when passing nil
+	PutBytesBuffer(nil)
+}
+
 func BenchmarkBytesBufferPool(b *testing.B) {
 	b.ResetTimer()
 	b.ReportAllocs()

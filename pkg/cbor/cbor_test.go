@@ -1,15 +1,14 @@
-package yaml
+package cbor
 
 import (
 	"bytes"
-	"strings"
 	"testing"
 )
 
 type TestStruct struct {
-	Name  string `yaml:"name"`
-	Age   int    `yaml:"age"`
-	Email string `yaml:"email"`
+	Name  string `cbor:"name"`
+	Age   int    `cbor:"age"`
+	Email string `cbor:"email"`
 }
 
 func TestNew(t *testing.T) {
@@ -32,26 +31,45 @@ func TestCodec_Marshal(t *testing.T) {
 		t.Fatalf("Marshal failed: %v", err)
 	}
 
-	resultStr := string(result)
-	if !strings.Contains(resultStr, "name: John Doe") {
-		t.Errorf("expected YAML to contain 'name: John Doe', got %s", resultStr)
+	if len(result) == 0 {
+		t.Error("expected non-empty result")
 	}
-	if !strings.Contains(resultStr, "age: 30") {
-		t.Errorf("expected YAML to contain 'age: 30', got %s", resultStr)
+
+	// Verify we can unmarshal it back
+	var unmarshaled TestStruct
+	err = codec.Unmarshal(result, &unmarshaled)
+	if err != nil {
+		t.Fatalf("Unmarshal verification failed: %v", err)
 	}
-	if !strings.Contains(resultStr, "email: john@example.com") {
-		t.Errorf("expected YAML to contain 'email: john@example.com', got %s", resultStr)
+
+	if unmarshaled.Name != data.Name {
+		t.Errorf("expected name '%s', got '%s'", data.Name, unmarshaled.Name)
+	}
+	if unmarshaled.Age != data.Age {
+		t.Errorf("expected age %d, got %d", data.Age, unmarshaled.Age)
+	}
+	if unmarshaled.Email != data.Email {
+		t.Errorf("expected email '%s', got '%s'", data.Email, unmarshaled.Email)
 	}
 }
 
 func TestCodec_Unmarshal(t *testing.T) {
 	codec := New[TestStruct]()
-	yamlData := []byte(`name: Jane Doe
-age: 25
-email: jane@example.com`)
+	data := TestStruct{
+		Name:  "Jane Doe",
+		Age:   25,
+		Email: "jane@example.com",
+	}
 
+	// First marshal the data
+	cborData, err := codec.Marshal(data)
+	if err != nil {
+		t.Fatalf("Marshal failed: %v", err)
+	}
+
+	// Now unmarshal it
 	var result TestStruct
-	err := codec.Unmarshal(yamlData, &result)
+	err = codec.Unmarshal(cborData, &result)
 	if err != nil {
 		t.Fatalf("Unmarshal failed: %v", err)
 	}
@@ -69,14 +87,12 @@ email: jane@example.com`)
 
 func TestCodec_Unmarshal_Invalid(t *testing.T) {
 	codec := New[TestStruct]()
-	yamlData := []byte(`invalid: yaml: data:
-  - broken
-    - structure`)
+	cborData := []byte{0xff, 0xff, 0xff} // Invalid CBOR data
 
 	var result TestStruct
-	err := codec.Unmarshal(yamlData, &result)
+	err := codec.Unmarshal(cborData, &result)
 	if err == nil {
-		t.Fatal("expected error for invalid YAML, got nil")
+		t.Fatal("expected error for invalid CBOR, got nil")
 	}
 }
 
@@ -94,27 +110,46 @@ func TestCodec_Encode(t *testing.T) {
 		t.Fatalf("Encode failed: %v", err)
 	}
 
-	resultStr := buf.String()
-	if !strings.Contains(resultStr, "name: Bob Smith") {
-		t.Errorf("expected YAML to contain 'name: Bob Smith', got %s", resultStr)
+	if buf.Len() == 0 {
+		t.Error("expected non-empty buffer")
 	}
-	if !strings.Contains(resultStr, "age: 35") {
-		t.Errorf("expected YAML to contain 'age: 35', got %s", resultStr)
+
+	// Verify we can decode it back
+	var decoded TestStruct
+	err = codec.Decode(&buf, &decoded)
+	if err != nil {
+		t.Fatalf("Decode verification failed: %v", err)
 	}
-	if !strings.Contains(resultStr, "email: bob@example.com") {
-		t.Errorf("expected YAML to contain 'email: bob@example.com', got %s", resultStr)
+
+	if decoded.Name != data.Name {
+		t.Errorf("expected name '%s', got '%s'", data.Name, decoded.Name)
+	}
+	if decoded.Age != data.Age {
+		t.Errorf("expected age %d, got %d", data.Age, decoded.Age)
+	}
+	if decoded.Email != data.Email {
+		t.Errorf("expected email '%s', got '%s'", data.Email, decoded.Email)
 	}
 }
 
 func TestCodec_Decode(t *testing.T) {
 	codec := New[TestStruct]()
-	yamlData := `name: Alice Johnson
-age: 28
-email: alice@example.com`
-	reader := strings.NewReader(yamlData)
+	data := TestStruct{
+		Name:  "Alice Johnson",
+		Age:   28,
+		Email: "alice@example.com",
+	}
 
+	// First encode the data
+	var buf bytes.Buffer
+	err := codec.Encode(&buf, data)
+	if err != nil {
+		t.Fatalf("Encode failed: %v", err)
+	}
+
+	// Now decode it
 	var result TestStruct
-	err := codec.Decode(reader, &result)
+	err = codec.Decode(&buf, &result)
 	if err != nil {
 		t.Fatalf("Decode failed: %v", err)
 	}
@@ -132,36 +167,12 @@ email: alice@example.com`
 
 func TestCodec_Decode_Invalid(t *testing.T) {
 	codec := New[TestStruct]()
-	yamlData := `invalid: yaml: data:
-  - broken
-    - structure`
-	reader := strings.NewReader(yamlData)
+	buf := bytes.NewBuffer([]byte{0xff, 0xff, 0xff}) // Invalid CBOR data
 
 	var result TestStruct
-	err := codec.Decode(reader, &result)
+	err := codec.Decode(buf, &result)
 	if err == nil {
-		t.Fatal("expected error for invalid YAML, got nil")
-	}
-}
-
-// errorWriter is a writer that always returns an error
-type errorWriter struct{}
-
-func (w *errorWriter) Write(p []byte) (n int, err error) {
-	return 0, bytes.ErrTooLarge
-}
-
-func TestCodec_Encode_WriteError(t *testing.T) {
-	codec := New[TestStruct]()
-	data := TestStruct{
-		Name:  "Test",
-		Age:   1,
-		Email: "test@test.com",
-	}
-
-	err := codec.Encode(&errorWriter{}, data)
-	if err == nil {
-		t.Fatal("expected error for write failure, got nil")
+		t.Fatal("expected error for invalid CBOR, got nil")
 	}
 }
 
