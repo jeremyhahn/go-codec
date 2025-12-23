@@ -1,0 +1,23 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Generated files (will be regenerated in container)
+*.pb.go
+coverage-*.out
+cpu-*.prof
+mem-*.prof
+*.log
+
+# Binaries
+/tmp/codec-*
+
+# Docker
+Dockerfile
+.dockerignore

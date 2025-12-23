@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/jeremyhahn/go-codec"
+	"github.com/jeremyhahn/go-codec/pkg/factory"
 )
 
 func main() {
@@ -19,8 +19,8 @@ func main() {
 	fmt.Println()
 
 	// Create a Protocol Buffers codec
-	// Note: Must use codec.NewProtoBuf instead of codec.New for protobuf types
-	protobufCodec := codec.NewProtoBuf[*Person]()
+	// Note: Must use factory.NewProtoBuf instead of factory.New for protobuf types
+	protobufCodec := factory.NewProtoBuf[*Person]()
 
 	// Marshal to protobuf bytes
 	data, err := protobufCodec.Marshal(person)

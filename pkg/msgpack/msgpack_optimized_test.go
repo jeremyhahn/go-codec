@@ -136,3 +136,67 @@ func TestOptimizedCodec_BufferReuse(t *testing.T) {
 		}
 	}
 }
+
+// unmarshalableType is a type that cannot be marshaled to MessagePack
+type unmarshalableType struct {
+	Ch chan int `msgpack:"ch"`
+}
+
+func TestOptimizedCodec_MarshalTo_Error(t *testing.T) {
+	codec := NewPool[unmarshalableType]()
+	data := unmarshalableType{Ch: make(chan int)}
+
+	buf := make([]byte, 0, 256)
+	_, err := codec.MarshalTo(buf, data)
+	if err == nil {
+		t.Fatal("expected error for unmarshalable type, got nil")
+	}
+}
+
+func TestOptimizedCodec_MarshalTo_SmallBuffer(t *testing.T) {
+	codec := NewPool[TestStruct]()
+	data := TestStruct{
+		Name:  "John Doe",
+		Age:   30,
+		Email: "john@example.com",
+	}
+
+	// Use a buffer that is too small to hold the result
+	buf := make([]byte, 0, 1)
+	result, err := codec.MarshalTo(buf, data)
+	if err != nil {
+		t.Fatalf("MarshalTo failed: %v", err)
+	}
+
+	// Result should be a new buffer, not the provided one
+	if cap(result) == cap(buf) {
+		t.Error("expected result to use new buffer when provided buffer is too small")
+	}
+
+	// Verify we can unmarshal it back
+	var unmarshaled TestStruct
+	err = codec.Unmarshal(result, &unmarshaled)
+	if err != nil {
+		t.Fatalf("Unmarshal verification failed: %v", err)
+	}
+
+	if unmarshaled.Name != data.Name {
+		t.Errorf("expected name '%s', got '%s'", data.Name, unmarshaled.Name)
+	}
+}
+
+func TestOptimizedCodec_AppendMarshal_Error(t *testing.T) {
+	codec := NewPool[unmarshalableType]()
+	data := unmarshalableType{Ch: make(chan int)}
+
+	buf := []byte("prefix")
+	result, err := codec.AppendMarshal(buf, data)
+	if err == nil {
+		t.Fatal("expected error for unmarshalable type, got nil")
+	}
+
+	// Verify original buffer is returned on error
+	if string(result) != "prefix" {
+		t.Errorf("expected original buffer on error, got %s", string(result))
+	}
+}

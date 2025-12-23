@@ -144,6 +144,27 @@ func TestCodec_Decode_Invalid(t *testing.T) {
 	}
 }
 
+// errorWriter is a writer that always returns an error
+type errorWriter struct{}
+
+func (w *errorWriter) Write(p []byte) (n int, err error) {
+	return 0, bytes.ErrTooLarge
+}
+
+func TestCodec_Encode_WriteError(t *testing.T) {
+	codec := New[TestStruct]()
+	data := TestStruct{
+		Name:  "Test",
+		Age:   1,
+		Email: "test@test.com",
+	}
+
+	err := codec.Encode(&errorWriter{}, data)
+	if err == nil {
+		t.Fatal("expected error for write failure, got nil")
+	}
+}
+
 func TestCodec_WithDifferentTypes(t *testing.T) {
 	t.Run("string", func(t *testing.T) {
 		codec := New[string]()
