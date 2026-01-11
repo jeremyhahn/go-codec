@@ -1,3 +1,5 @@
+//go:build codec_protobuf
+
 package protobuf
 
 import (

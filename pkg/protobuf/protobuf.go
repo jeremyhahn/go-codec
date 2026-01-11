@@ -1,10 +1,17 @@
+//go:build codec_protobuf
+
 package protobuf
 
 import (
 	"io"
 
+	codec "github.com/jeremyhahn/go-codec"
 	"google.golang.org/protobuf/proto"
 )
+
+func init() {
+	codec.RegisterCodec(codec.ProtoBuf)
+}
 
 // ProtoMessage is a constraint that requires types to implement proto.Message
 type ProtoMessage interface {

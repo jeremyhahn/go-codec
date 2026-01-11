@@ -6,8 +6,9 @@ A generic codec library for Go with a unified API across multiple serialization 
 
 - **Unified API** - Same interface for all formats
 - **Go Generics** - Type-safe encoding/decoding
-- **9 Formats** - JSON, YAML, TOML, MessagePack, BSON, CBOR, Avro, Protocol Buffers
+- **8 Formats** - JSON, YAML, TOML, MessagePack, BSON, CBOR, Avro, Protocol Buffers
 - **Modular Imports** - Only import the codecs you need
+- **Conditional Compilation** - Exclude codecs via build tags
 - **100% Test Coverage**
 
 ## Installation
@@ -52,7 +53,10 @@ import (
     "github.com/jeremyhahn/go-codec/pkg/factory"
 )
 
-c, _ := factory.New[User](codec.JSON)
+c, err := factory.New[User](codec.JSON)
+if err != nil {
+    log.Fatal(err) // codec not compiled in
+}
 data, _ := c.Marshal(user)
 ```
 
@@ -68,6 +72,32 @@ data, _ := c.Marshal(user)
 | CBOR | `pkg/cbor` | `cbor:"name"` |
 | Avro | `pkg/avro` | `avro:"name"` |
 | Protocol Buffers | `pkg/protobuf` | (generated) |
+
+## Conditional Compilation
+
+Exclude codecs at build time to reduce binary size:
+
+```bash
+# Build without Avro and Protobuf
+make build WITH_CODEC_AVRO=0 WITH_CODEC_PROTOBUF=0
+
+# Or with go build
+go build -tags "codec_json,codec_yaml"
+```
+
+Query available codecs at runtime:
+
+```go
+import "github.com/jeremyhahn/go-codec"
+
+for _, c := range codec.SupportedCodecs() {
+    fmt.Println(c) // prints only compiled-in codecs
+}
+
+if codec.IsSupported(codec.Avro) {
+    // use Avro
+}
+```
 
 ## API
 
@@ -104,7 +134,10 @@ codec.Decode(&buf, &result)
 import "github.com/jeremyhahn/go-codec/pkg/factory"
 
 // Requires generated protobuf code
-codec := factory.NewProtoBuf[*pb.User]()
+codec, err := factory.NewProtoBuf[*pb.User]()
+if err != nil {
+    log.Fatal(err)
+}
 data, _ := codec.Marshal(user)
 ```
 

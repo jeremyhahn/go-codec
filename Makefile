@@ -4,6 +4,58 @@
 # All packages in pkg/ are automatically included.
 
 # ==============================================================================
+# Codec Build Configuration
+# ==============================================================================
+# Set any of these to 0 to exclude the codec from the build.
+# By default, all codecs are included.
+
+WITH_CODEC_JSON     ?= 1
+WITH_CODEC_YAML     ?= 1
+WITH_CODEC_TOML     ?= 1
+WITH_CODEC_MSGPACK  ?= 1
+WITH_CODEC_BSON     ?= 1
+WITH_CODEC_CBOR     ?= 1
+WITH_CODEC_AVRO     ?= 1
+WITH_CODEC_PROTOBUF ?= 1
+
+# Build the codec build tags based on WITH_CODEC_X variables
+CODEC_TAGS :=
+ifeq ($(WITH_CODEC_JSON),1)
+    CODEC_TAGS += codec_json
+endif
+ifeq ($(WITH_CODEC_YAML),1)
+    CODEC_TAGS += codec_yaml
+endif
+ifeq ($(WITH_CODEC_TOML),1)
+    CODEC_TAGS += codec_toml
+endif
+ifeq ($(WITH_CODEC_MSGPACK),1)
+    CODEC_TAGS += codec_msgpack
+endif
+ifeq ($(WITH_CODEC_BSON),1)
+    CODEC_TAGS += codec_bson
+endif
+ifeq ($(WITH_CODEC_CBOR),1)
+    CODEC_TAGS += codec_cbor
+endif
+ifeq ($(WITH_CODEC_AVRO),1)
+    CODEC_TAGS += codec_avro
+endif
+ifeq ($(WITH_CODEC_PROTOBUF),1)
+    CODEC_TAGS += codec_protobuf
+endif
+
+# Convert space-separated tags to comma-separated
+COMMA := ,
+EMPTY :=
+SPACE := $(EMPTY) $(EMPTY)
+BUILD_TAGS := $(subst $(SPACE),$(COMMA),$(strip $(CODEC_TAGS)))
+
+# Go build flags with tags
+GO_BUILD_FLAGS := -tags "$(BUILD_TAGS)"
+GO_TEST_FLAGS := -tags "$(BUILD_TAGS)"
+
+# ==============================================================================
 # Package Discovery
 # ==============================================================================
 
@@ -44,7 +96,7 @@ test: $(TEST_TARGETS)
 .PHONY: $(TEST_TARGETS)
 $(TEST_TARGETS): test-%:
 	@echo "Running tests for $*..."
-	@go test -v -race -coverprofile=coverage-$*.out ./pkg/$*
+	@go test $(GO_TEST_FLAGS) -v -race -coverprofile=coverage-$*.out ./pkg/$*
 
 # ==============================================================================
 # Integration Test Targets (Template-based)
@@ -60,7 +112,7 @@ integration-test: $(INTEGRATION_TEST_TARGETS)
 .PHONY: $(INTEGRATION_TEST_TARGETS)
 $(INTEGRATION_TEST_TARGETS): integration-test-%:
 	@echo "Running integration tests for $*..."
-	@go test -v -race -tags=integration -coverprofile=coverage-integration-$*.out ./pkg/$* 2>/dev/null || echo "No integration tests for $*"
+	@go test -v -race -tags="$(BUILD_TAGS),integration" -coverprofile=coverage-integration-$*.out ./pkg/$* 2>/dev/null || echo "No integration tests for $*"
 
 # ==============================================================================
 # Coverage Targets (Template-based)
@@ -75,7 +127,7 @@ coverage: $(COVERAGE_TARGETS)
 .PHONY: $(COVERAGE_TARGETS)
 $(COVERAGE_TARGETS): coverage-%:
 	@echo "Coverage for $*:"
-	@go test -coverprofile=coverage-$*.out ./pkg/$* > /dev/null 2>&1
+	@go test $(GO_TEST_FLAGS) -coverprofile=coverage-$*.out ./pkg/$* > /dev/null 2>&1
 	@go tool cover -func=coverage-$*.out | grep total
 
 # Combined coverage report
@@ -106,7 +158,7 @@ bench-all: bench
 .PHONY: $(BENCH_TARGETS)
 $(BENCH_TARGETS): bench-%:
 	@echo "Running benchmarks for $*..."
-	@go test -bench=. -benchmem -run=^$$ ./pkg/$* 2>/dev/null || echo "No benchmarks for $*"
+	@go test $(GO_TEST_FLAGS) -bench=. -benchmem -run=^$$ ./pkg/$* 2>/dev/null || echo "No benchmarks for $*"
 
 # ==============================================================================
 # Specialized Benchmark Targets
@@ -117,10 +169,10 @@ $(BENCH_TARGETS): bench-%:
 bench-comparison:
 	@echo "Running comparison benchmarks..."
 	@for pkg in $(PACKAGES); do \
-		if go test -list 'BenchmarkComparison' ./pkg/$$pkg 2>/dev/null | grep -q Benchmark; then \
+		if go test $(GO_TEST_FLAGS) -list 'BenchmarkComparison' ./pkg/$$pkg 2>/dev/null | grep -q Benchmark; then \
 			echo ""; \
 			echo "=== $$pkg Comparison ==="; \
-			go test -bench=BenchmarkComparison -benchmem -run=^$$ ./pkg/$$pkg; \
+			go test $(GO_TEST_FLAGS) -bench=BenchmarkComparison -benchmem -run=^$$ ./pkg/$$pkg; \
 		fi \
 	done
 
@@ -129,10 +181,10 @@ bench-comparison:
 bench-optimized:
 	@echo "Running optimized API benchmarks..."
 	@for pkg in $(PACKAGES); do \
-		if go test -list 'BenchmarkOptimized' ./pkg/$$pkg 2>/dev/null | grep -q Benchmark; then \
+		if go test $(GO_TEST_FLAGS) -list 'BenchmarkOptimized' ./pkg/$$pkg 2>/dev/null | grep -q Benchmark; then \
 			echo ""; \
 			echo "=== $$pkg Optimized ==="; \
-			go test -bench=BenchmarkOptimized -benchmem -run=^$$ ./pkg/$$pkg; \
+			go test $(GO_TEST_FLAGS) -bench=BenchmarkOptimized -benchmem -run=^$$ ./pkg/$$pkg; \
 		fi \
 	done
 
@@ -141,10 +193,10 @@ bench-optimized:
 bench-baseline:
 	@echo "Running baseline API benchmarks..."
 	@for pkg in $(PACKAGES); do \
-		if go test -list 'BenchmarkCodec_' ./pkg/$$pkg 2>/dev/null | grep -q Benchmark; then \
+		if go test $(GO_TEST_FLAGS) -list 'BenchmarkCodec_' ./pkg/$$pkg 2>/dev/null | grep -q Benchmark; then \
 			echo ""; \
 			echo "=== $$pkg Baseline ==="; \
-			go test -bench='^BenchmarkCodec_' -benchmem -run=^$$ ./pkg/$$pkg; \
+			go test $(GO_TEST_FLAGS) -bench='^BenchmarkCodec_' -benchmem -run=^$$ ./pkg/$$pkg; \
 		fi \
 	done
 
@@ -156,7 +208,7 @@ bench-cpu:
 		exit 1; \
 	fi
 	@echo "Running benchmarks with CPU profiling for $(PKG)..."
-	@go test -bench=. -benchmem -cpuprofile=cpu-$(PKG).prof -run=^$$ ./pkg/$(PKG)
+	@go test $(GO_TEST_FLAGS) -bench=. -benchmem -cpuprofile=cpu-$(PKG).prof -run=^$$ ./pkg/$(PKG)
 	@echo "CPU profile saved to cpu-$(PKG).prof"
 	@echo "Analyze with: go tool pprof cpu-$(PKG).prof"
 
@@ -168,7 +220,7 @@ bench-mem:
 		exit 1; \
 	fi
 	@echo "Running benchmarks with memory profiling for $(PKG)..."
-	@go test -bench=. -benchmem -memprofile=mem-$(PKG).prof -run=^$$ ./pkg/$(PKG)
+	@go test $(GO_TEST_FLAGS) -bench=. -benchmem -memprofile=mem-$(PKG).prof -run=^$$ ./pkg/$(PKG)
 	@echo "Memory profile saved to mem-$(PKG).prof"
 	@echo "Analyze with: go tool pprof mem-$(PKG).prof"
 
@@ -177,9 +229,9 @@ bench-mem:
 bench-quick:
 	@echo "Quick benchmark comparison (Marshal only)..."
 	@for pkg in $(PACKAGES); do \
-		if go test -list 'Marshal' ./pkg/$$pkg 2>/dev/null | grep -q Benchmark; then \
+		if go test $(GO_TEST_FLAGS) -list 'Marshal' ./pkg/$$pkg 2>/dev/null | grep -q Benchmark; then \
 			echo "=== $$pkg ==="; \
-			go test -bench='Marshal$$' -benchmem -run=^$$ ./pkg/$$pkg 2>/dev/null | grep -E "(Benchmark|ns/op)" || true; \
+			go test $(GO_TEST_FLAGS) -bench='Marshal$$' -benchmem -run=^$$ ./pkg/$$pkg 2>/dev/null | grep -E "(Benchmark|ns/op)" || true; \
 		fi \
 	done
 
@@ -238,7 +290,7 @@ fmt:
 .PHONY: vet
 vet:
 	@echo "Running go vet..."
-	@go vet ./...
+	@go vet $(GO_BUILD_FLAGS) ./...
 
 # ==============================================================================
 # Build Targets
@@ -247,11 +299,11 @@ vet:
 # Build all packages
 .PHONY: build
 build:
-	@echo "Building all packages..."
-	@go build ./...
+	@echo "Building all packages with tags: $(BUILD_TAGS)..."
+	@go build $(GO_BUILD_FLAGS) ./...
 	@echo "Building examples..."
-	@go build -o /tmp/codec-example ./examples/main.go
-	@go build -o /tmp/codec-protobuf-example ./examples/protobuf/...
+	@go build $(GO_BUILD_FLAGS) -o /tmp/codec-example ./examples/main.go
+	@go build $(GO_BUILD_FLAGS) -o /tmp/codec-protobuf-example ./examples/protobuf/...
 
 # ==============================================================================
 # Examples Targets
@@ -266,12 +318,13 @@ examples/protobuf/%.pb.go: examples/protobuf/%.proto
 .PHONY: examples
 examples: $(EXAMPLE_PROTO_GEN_FILES)
 	@echo "=== Building and Running Examples ==="
+	@echo "Build tags: $(BUILD_TAGS)"
 	@echo ""
 	@echo "--- Main Example (all codecs) ---"
-	@go run ./examples/main.go
+	@go run $(GO_BUILD_FLAGS) ./examples/main.go
 	@echo ""
 	@echo "--- Protocol Buffers Example ---"
-	@go run ./examples/protobuf/...
+	@go run $(GO_BUILD_FLAGS) ./examples/protobuf/...
 
 # Run examples in Docker (includes protobuf tooling)
 .PHONY: docker-examples
@@ -403,6 +456,16 @@ help:
 	@echo "go-codec Makefile"
 	@echo ""
 	@echo "Discovered packages: $(PACKAGES)"
+	@echo ""
+	@echo "Current build tags: $(BUILD_TAGS)"
+	@echo ""
+	@echo "Codec configuration (set to 0 to disable):"
+	@echo "  WITH_CODEC_JSON=$(WITH_CODEC_JSON)       WITH_CODEC_YAML=$(WITH_CODEC_YAML)"
+	@echo "  WITH_CODEC_TOML=$(WITH_CODEC_TOML)       WITH_CODEC_MSGPACK=$(WITH_CODEC_MSGPACK)"
+	@echo "  WITH_CODEC_BSON=$(WITH_CODEC_BSON)       WITH_CODEC_CBOR=$(WITH_CODEC_CBOR)"
+	@echo "  WITH_CODEC_AVRO=$(WITH_CODEC_AVRO)       WITH_CODEC_PROTOBUF=$(WITH_CODEC_PROTOBUF)"
+	@echo ""
+	@echo "Example: make build WITH_CODEC_AVRO=0 WITH_CODEC_PROTOBUF=0"
 	@echo ""
 	@echo "All targets support any package in pkg/ via templates."
 	@echo ""

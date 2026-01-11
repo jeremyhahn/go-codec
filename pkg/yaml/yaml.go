@@ -1,10 +1,17 @@
+//go:build codec_yaml
+
 package yaml
 
 import (
 	"io"
 
+	codec "github.com/jeremyhahn/go-codec"
 	"gopkg.in/yaml.v3"
 )
+
+func init() {
+	codec.RegisterCodec(codec.YAML)
+}
 
 // Codec implements the codec.Codec interface for YAML serialization
 type Codec[T any] struct{}

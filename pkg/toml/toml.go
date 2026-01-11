@@ -1,3 +1,5 @@
+//go:build codec_toml
+
 package toml
 
 import (
@@ -5,7 +7,12 @@ import (
 	"io"
 
 	"github.com/BurntSushi/toml"
+	codec "github.com/jeremyhahn/go-codec"
 )
+
+func init() {
+	codec.RegisterCodec(codec.TOML)
+}
 
 // Codec implements the codec.Codec interface for TOML serialization
 type Codec[T any] struct{}

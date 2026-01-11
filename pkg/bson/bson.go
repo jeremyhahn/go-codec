@@ -1,10 +1,17 @@
+//go:build codec_bson
+
 package bson
 
 import (
 	"io"
 
+	codec "github.com/jeremyhahn/go-codec"
 	"go.mongodb.org/mongo-driver/bson"
 )
+
+func init() {
+	codec.RegisterCodec(codec.BSON)
+}
 
 // Codec implements the codec.Codec interface for BSON serialization
 type Codec[T any] struct{}

@@ -1,3 +1,5 @@
+//go:build codec_toml
+
 package toml
 
 import (

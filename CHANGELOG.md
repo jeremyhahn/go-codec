@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2025-01-10
+
+### Added
+- **Conditional compilation** via build tags (`codec_json`, `codec_yaml`, etc.)
+- **Makefile variables** (`WITH_CODEC_X=0/1`) to include/exclude codecs at build time
+- **Runtime codec discovery** with `SupportedCodecs()` and `IsSupported()` functions
+- **ErrCodecNotSupported** error type for disabled codecs
+
+### Changed
+- Factory functions now return errors when codec is unavailable
+- All codec packages use build tags for conditional inclusion
+
 ## [1.2.0] - 2024-12-22
 
 ### Added

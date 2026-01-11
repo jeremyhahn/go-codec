@@ -1,10 +1,17 @@
+//go:build codec_msgpack
+
 package msgpack
 
 import (
 	"io"
 
+	codec "github.com/jeremyhahn/go-codec"
 	"github.com/vmihailenco/msgpack/v5"
 )
+
+func init() {
+	codec.RegisterCodec(codec.MsgPack)
+}
 
 // Codec implements the codec.Codec interface for MessagePack serialization
 type Codec[T any] struct{}

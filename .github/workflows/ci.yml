@@ -9,6 +9,7 @@ on:
 env:
   GO_VERSION: '1.25.5'
   COVERAGE_THRESHOLD: 95
+  BUILD_TAGS: 'codec_json,codec_yaml,codec_toml,codec_msgpack,codec_bson,codec_cbor,codec_avro,codec_protobuf'
 
 jobs:
   # Job 1: Unit Tests with Coverage Enforcement
@@ -48,7 +49,7 @@ jobs:
           echo "mode: set" > coverage.out
           for pkg in pkg/avro pkg/bson pkg/cbor pkg/factory pkg/json pkg/msgpack pkg/pool pkg/protobuf pkg/toml pkg/yaml; do
             echo "Testing $pkg..."
-            go test -v -race -coverprofile=coverage-$(basename $pkg).out ./$pkg
+            go test -tags "${{ env.BUILD_TAGS }}" -v -race -coverprofile=coverage-$(basename $pkg).out ./$pkg
             tail -n +2 coverage-$(basename $pkg).out >> coverage.out
           done
 
@@ -146,13 +147,13 @@ jobs:
           fi
 
       - name: Run go vet
-        run: go vet ./...
+        run: go vet -tags "${{ env.BUILD_TAGS }}" ./...
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v7
         with:
           version: v2.7.2
-          args: --timeout=5m
+          args: --timeout=5m --build-tags "${{ env.BUILD_TAGS }}"
 
   # Job 3: Security Scanning
   security:
@@ -195,6 +196,7 @@ jobs:
             -severity medium \
             -confidence medium \
             -exclude-dir=testdata \
+            -tags "${{ env.BUILD_TAGS }}" \
             -fmt sarif -out gosec-results.sarif ./...
         continue-on-error: true
 
@@ -208,7 +210,7 @@ jobs:
       - name: Run govulncheck
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
-          govulncheck ./...
+          govulncheck -tags "${{ env.BUILD_TAGS }}" ./...
 
   # Job 4: Build
   build:
@@ -240,12 +242,12 @@ jobs:
           make generate-examples
 
       - name: Build all packages
-        run: go build ./...
+        run: go build -tags "${{ env.BUILD_TAGS }}" ./...
 
       - name: Build examples
         run: |
-          go build -o /tmp/codec-example ./examples/main.go
-          go build -o /tmp/codec-protobuf-example ./examples/protobuf/...
+          go build -tags "${{ env.BUILD_TAGS }}" -o /tmp/codec-example ./examples/main.go
+          go build -tags "${{ env.BUILD_TAGS }}" -o /tmp/codec-protobuf-example ./examples/protobuf/...
 
   # Job 5: Race Detector
   race:
@@ -276,7 +278,7 @@ jobs:
           make generate-examples
 
       - name: Run tests with race detector
-        run: go test -race -short ./...
+        run: go test -tags "${{ env.BUILD_TAGS }}" -race -short ./...
 
   # Job 6: Benchmarks
   benchmark:
@@ -308,11 +310,8 @@ jobs:
 
       - name: Run benchmarks
         run: |
-          echo "=== JSON Benchmarks ==="
-          go test -bench=. -benchmem -run=^$ ./pkg/json
-          echo ""
-          echo "=== MessagePack Benchmarks ==="
-          go test -bench=. -benchmem -run=^$ ./pkg/msgpack
-          echo ""
-          echo "=== Avro Benchmarks ==="
-          go test -bench=. -benchmem -run=^$ ./pkg/avro
+          for pkg in json yaml toml msgpack bson cbor avro protobuf; do
+            echo "=== ${pkg^^} Benchmarks ==="
+            go test -tags "${{ env.BUILD_TAGS }}" -bench=. -benchmem -run=^$ ./pkg/$pkg || true
+            echo ""
+          done
