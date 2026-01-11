@@ -1,3 +1,5 @@
+//go:build codec_json && codec_yaml && codec_toml && codec_msgpack && codec_bson && codec_cbor && codec_avro && codec_protobuf
+
 package factory
 
 import (
@@ -185,14 +187,18 @@ func TestNew_Unsupported(t *testing.T) {
 		t.Fatal("Expected error for unsupported codec type")
 	}
 
-	expectedMsg := "unsupported codec type"
+	// The error should indicate the codec is not supported
+	expectedMsg := "not supported"
 	if !bytes.Contains([]byte(err.Error()), []byte(expectedMsg)) {
 		t.Errorf("Expected error containing %q, got %q", expectedMsg, err.Error())
 	}
 }
 
 func TestNewProtoBuf(t *testing.T) {
-	c := NewProtoBuf[*testdata.TestMessage]()
+	c, err := NewProtoBuf[*testdata.TestMessage]()
+	if err != nil {
+		t.Fatalf("Failed to create ProtoBuf codec: %v", err)
+	}
 
 	data := &testdata.TestMessage{
 		Name:  "John Doe",
@@ -235,5 +241,46 @@ func TestNew_EncodeDecodeStream(t *testing.T) {
 
 	if decoded.Name != data.Name || decoded.Value != data.Value {
 		t.Errorf("Data mismatch: got %+v, want %+v", decoded, data)
+	}
+}
+
+func TestSupportedCodecs(t *testing.T) {
+	// Get supported codecs - since we're building with all codec tags,
+	// all 8 codecs should be supported
+	supported := codec.SupportedCodecs()
+
+	// Verify we have at least one codec
+	if len(supported) == 0 {
+		t.Error("Expected at least one supported codec")
+	}
+
+	// Log supported codecs for debugging
+	t.Logf("Supported codecs: %v", supported)
+
+	// Verify IsSupported works for each
+	for _, c := range supported {
+		if !codec.IsSupported(c) {
+			t.Errorf("IsSupported(%q) returned false but codec is in SupportedCodecs()", c)
+		}
+	}
+}
+
+func TestNew_RegisteredButUnhandledCodec(t *testing.T) {
+	// This test covers the default case in the switch statement.
+	// We register a custom codec type that isn't handled in the factory switch.
+	customCodec := codec.Type("custom_test_codec")
+
+	// Register the custom codec (simulating a new codec being added)
+	codec.RegisterCodec(customCodec)
+
+	// Now IsSupported returns true, but there's no case for it in the switch
+	_, err := New[TestData](customCodec)
+	if err == nil {
+		t.Fatal("Expected error for unhandled codec type")
+	}
+
+	expectedMsg := "unsupported codec type"
+	if !bytes.Contains([]byte(err.Error()), []byte(expectedMsg)) {
+		t.Errorf("Expected error containing %q, got %q", expectedMsg, err.Error())
 	}
 }

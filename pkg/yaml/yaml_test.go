@@ -1,3 +1,5 @@
+//go:build codec_yaml
+
 package yaml
 
 import (

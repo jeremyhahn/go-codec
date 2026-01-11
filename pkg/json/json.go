@@ -1,9 +1,17 @@
+//go:build codec_json
+
 package json
 
 import (
 	"encoding/json"
 	"io"
+
+	codec "github.com/jeremyhahn/go-codec"
 )
+
+func init() {
+	codec.RegisterCodec(codec.JSON)
+}
 
 // Codec implements the codec.Codec interface for JSON serialization
 type Codec[T any] struct{}

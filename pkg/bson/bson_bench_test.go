@@ -1,3 +1,5 @@
+//go:build codec_bson
+
 package bson
 
 import (

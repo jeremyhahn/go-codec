@@ -1,10 +1,17 @@
+//go:build codec_cbor
+
 package cbor
 
 import (
 	"io"
 
 	"github.com/fxamacker/cbor/v2"
+	codec "github.com/jeremyhahn/go-codec"
 )
+
+func init() {
+	codec.RegisterCodec(codec.CBOR)
+}
 
 // Codec implements the codec.Codec interface for CBOR serialization
 type Codec[T any] struct{}

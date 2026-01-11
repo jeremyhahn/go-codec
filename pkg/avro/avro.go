@@ -1,3 +1,5 @@
+//go:build codec_avro
+
 package avro
 
 import (
@@ -5,7 +7,12 @@ import (
 	"reflect"
 
 	"github.com/hamba/avro/v2"
+	codec "github.com/jeremyhahn/go-codec"
 )
+
+func init() {
+	codec.RegisterCodec(codec.Avro)
+}
 
 // Codec implements the codec.Codec interface for Avro serialization
 type Codec[T any] struct {

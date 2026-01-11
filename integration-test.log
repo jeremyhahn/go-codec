@@ -1,0 +1,413 @@
+Running integration tests for avro...
+=== RUN   TestNew
+--- PASS: TestNew (0.00s)
+=== RUN   TestNewWithSchema
+--- PASS: TestNewWithSchema (0.00s)
+=== RUN   TestNewWithSchema_Invalid
+--- PASS: TestNewWithSchema_Invalid (0.00s)
+=== RUN   TestCodec_Marshal
+--- PASS: TestCodec_Marshal (0.00s)
+=== RUN   TestCodec_Unmarshal
+--- PASS: TestCodec_Unmarshal (0.00s)
+=== RUN   TestCodec_Unmarshal_Invalid
+--- PASS: TestCodec_Unmarshal_Invalid (0.00s)
+=== RUN   TestCodec_Encode
+--- PASS: TestCodec_Encode (0.00s)
+=== RUN   TestCodec_Decode
+--- PASS: TestCodec_Decode (0.00s)
+=== RUN   TestCodec_Decode_Invalid
+--- PASS: TestCodec_Decode_Invalid (0.00s)
+=== RUN   TestCodec_Schema
+--- PASS: TestCodec_Schema (0.00s)
+=== RUN   TestCodec_SchemaJSON
+--- PASS: TestCodec_SchemaJSON (0.00s)
+=== RUN   TestSchemaCache
+--- PASS: TestSchemaCache (0.00s)
+=== RUN   TestCodec_WithDifferentTypes
+=== RUN   TestCodec_WithDifferentTypes/string
+=== RUN   TestCodec_WithDifferentTypes/int
+=== RUN   TestCodec_WithDifferentTypes/float64
+=== RUN   TestCodec_WithDifferentTypes/bool
+=== RUN   TestCodec_WithDifferentTypes/bytes
+=== RUN   TestCodec_WithDifferentTypes/slice
+=== RUN   TestCodec_WithDifferentTypes/map
+=== RUN   TestCodec_WithDifferentTypes/nested_struct
+--- PASS: TestCodec_WithDifferentTypes (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/string (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/int (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/float64 (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/bool (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/bytes (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/slice (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/map (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/nested_struct (0.00s)
+=== RUN   TestCodec_WithTimeField
+--- PASS: TestCodec_WithTimeField (0.00s)
+=== RUN   TestCodec_WithPointerField
+=== RUN   TestCodec_WithPointerField/nil_pointer
+=== RUN   TestCodec_WithPointerField/non_nil_pointer
+--- PASS: TestCodec_WithPointerField (0.00s)
+    --- PASS: TestCodec_WithPointerField/nil_pointer (0.00s)
+    --- PASS: TestCodec_WithPointerField/non_nil_pointer (0.00s)
+=== RUN   TestCodec_WithAvroTag
+--- PASS: TestCodec_WithAvroTag (0.00s)
+=== RUN   TestCodec_SkippedField
+--- PASS: TestCodec_SkippedField (0.00s)
+=== RUN   TestGetOrCreateSchema_NilType
+--- PASS: TestGetOrCreateSchema_NilType (0.00s)
+=== RUN   TestGetOrCreateSchema_PointerType
+--- PASS: TestGetOrCreateSchema_PointerType (0.00s)
+=== RUN   TestGetOrCreateSchema_Cache
+--- PASS: TestGetOrCreateSchema_Cache (0.00s)
+=== RUN   TestGenerateSchema_AllPrimitives
+=== RUN   TestGenerateSchema_AllPrimitives/bool
+=== RUN   TestGenerateSchema_AllPrimitives/int
+=== RUN   TestGenerateSchema_AllPrimitives/int8
+=== RUN   TestGenerateSchema_AllPrimitives/int16
+=== RUN   TestGenerateSchema_AllPrimitives/int32
+=== RUN   TestGenerateSchema_AllPrimitives/int64
+=== RUN   TestGenerateSchema_AllPrimitives/uint
+=== RUN   TestGenerateSchema_AllPrimitives/uint8
+=== RUN   TestGenerateSchema_AllPrimitives/uint16
+=== RUN   TestGenerateSchema_AllPrimitives/uint32
+=== RUN   TestGenerateSchema_AllPrimitives/uint64
+=== RUN   TestGenerateSchema_AllPrimitives/float32
+=== RUN   TestGenerateSchema_AllPrimitives/float64
+=== RUN   TestGenerateSchema_AllPrimitives/string
+--- PASS: TestGenerateSchema_AllPrimitives (0.00s)
+    --- PASS: TestGenerateSchema_AllPrimitives/bool (0.00s)
+    --- PASS: TestGenerateSchema_AllPrimitives/int (0.00s)
+    --- PASS: TestGenerateSchema_AllPrimitives/int8 (0.00s)
+    --- PASS: TestGenerateSchema_AllPrimitives/int16 (0.00s)
+    --- PASS: TestGenerateSchema_AllPrimitives/int32 (0.00s)
+    --- PASS: TestGenerateSchema_AllPrimitives/int64 (0.00s)
+    --- PASS: TestGenerateSchema_AllPrimitives/uint (0.00s)
+    --- PASS: TestGenerateSchema_AllPrimitives/uint8 (0.00s)
+    --- PASS: TestGenerateSchema_AllPrimitives/uint16 (0.00s)
+    --- PASS: TestGenerateSchema_AllPrimitives/uint32 (0.00s)
+    --- PASS: TestGenerateSchema_AllPrimitives/uint64 (0.00s)
+    --- PASS: TestGenerateSchema_AllPrimitives/float32 (0.00s)
+    --- PASS: TestGenerateSchema_AllPrimitives/float64 (0.00s)
+    --- PASS: TestGenerateSchema_AllPrimitives/string (0.00s)
+=== RUN   TestGenerateSchema_Bytes
+--- PASS: TestGenerateSchema_Bytes (0.00s)
+=== RUN   TestGenerateSchema_Array
+--- PASS: TestGenerateSchema_Array (0.00s)
+=== RUN   TestGenerateSchema_Slice
+--- PASS: TestGenerateSchema_Slice (0.00s)
+=== RUN   TestGenerateSchema_Map
+--- PASS: TestGenerateSchema_Map (0.00s)
+=== RUN   TestGenerateSchema_Interface
+--- PASS: TestGenerateSchema_Interface (0.00s)
+=== RUN   TestGenerateSchema_Pointer
+--- PASS: TestGenerateSchema_Pointer (0.00s)
+=== RUN   TestGenerateRecordSchema_Time
+--- PASS: TestGenerateRecordSchema_Time (0.00s)
+=== RUN   TestGenerateRecordSchema_UnexportedFields
+--- PASS: TestGenerateRecordSchema_UnexportedFields (0.00s)
+=== RUN   TestGenerateRecordSchema_AnonymousStruct
+--- PASS: TestGenerateRecordSchema_AnonymousStruct (0.00s)
+=== RUN   TestGenerateRecordSchema_PointerField
+--- PASS: TestGenerateRecordSchema_PointerField (0.00s)
+=== RUN   TestGetFieldName_EmptyAvroTag
+--- PASS: TestGetFieldName_EmptyAvroTag (0.00s)
+=== RUN   TestGetFieldName_NoTags
+--- PASS: TestGetFieldName_NoTags (0.00s)
+=== RUN   TestGetFieldName_AvroTagWithOptions
+--- PASS: TestGetFieldName_AvroTagWithOptions (0.00s)
+=== RUN   TestClearSchemaCache
+--- PASS: TestClearSchemaCache (0.00s)
+=== RUN   TestGenerateSchema_UnsupportedType
+--- PASS: TestGenerateSchema_UnsupportedType (0.00s)
+=== RUN   TestGenerateSchema_FuncType
+--- PASS: TestGenerateSchema_FuncType (0.00s)
+=== RUN   TestGenerateSchema_UnsafePointer
+--- PASS: TestGenerateSchema_UnsafePointer (0.00s)
+=== RUN   TestGenerateRecordSchema_InvalidFieldName
+--- PASS: TestGenerateRecordSchema_InvalidFieldName (0.00s)
+=== RUN   TestGetOrCreateSchema_ConcurrentAccess
+--- PASS: TestGetOrCreateSchema_ConcurrentAccess (0.11s)
+PASS
+coverage: 100.0% of statements
+ok  	github.com/jeremyhahn/go-codec/pkg/avro	1.180s	coverage: 100.0% of statements
+Running integration tests for bson...
+=== RUN   TestNew
+--- PASS: TestNew (0.00s)
+=== RUN   TestCodec_Marshal
+--- PASS: TestCodec_Marshal (0.00s)
+=== RUN   TestCodec_Unmarshal
+--- PASS: TestCodec_Unmarshal (0.00s)
+=== RUN   TestCodec_Unmarshal_Invalid
+--- PASS: TestCodec_Unmarshal_Invalid (0.00s)
+=== RUN   TestCodec_Encode
+--- PASS: TestCodec_Encode (0.00s)
+=== RUN   TestCodec_Decode
+--- PASS: TestCodec_Decode (0.00s)
+=== RUN   TestCodec_Decode_Invalid
+--- PASS: TestCodec_Decode_Invalid (0.00s)
+=== RUN   TestCodec_Decode_ReadError
+--- PASS: TestCodec_Decode_ReadError (0.00s)
+=== RUN   TestCodec_Encode_WriteError
+--- PASS: TestCodec_Encode_WriteError (0.00s)
+=== RUN   TestCodec_WithDifferentTypes
+=== RUN   TestCodec_WithDifferentTypes/struct_with_embedded_fields
+=== RUN   TestCodec_WithDifferentTypes/map
+=== RUN   TestCodec_WithDifferentTypes/struct_with_slice_field
+--- PASS: TestCodec_WithDifferentTypes (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/struct_with_embedded_fields (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/map (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/struct_with_slice_field (0.00s)
+PASS
+coverage: 100.0% of statements
+ok  	github.com/jeremyhahn/go-codec/pkg/bson	1.036s	coverage: 100.0% of statements
+Running integration tests for cbor...
+=== RUN   TestNew
+--- PASS: TestNew (0.00s)
+=== RUN   TestCodec_Marshal
+--- PASS: TestCodec_Marshal (0.00s)
+=== RUN   TestCodec_Unmarshal
+--- PASS: TestCodec_Unmarshal (0.00s)
+=== RUN   TestCodec_Unmarshal_Invalid
+--- PASS: TestCodec_Unmarshal_Invalid (0.00s)
+=== RUN   TestCodec_Encode
+--- PASS: TestCodec_Encode (0.00s)
+=== RUN   TestCodec_Decode
+--- PASS: TestCodec_Decode (0.00s)
+=== RUN   TestCodec_Decode_Invalid
+--- PASS: TestCodec_Decode_Invalid (0.00s)
+=== RUN   TestCodec_WithDifferentTypes
+=== RUN   TestCodec_WithDifferentTypes/string
+=== RUN   TestCodec_WithDifferentTypes/int
+=== RUN   TestCodec_WithDifferentTypes/slice
+=== RUN   TestCodec_WithDifferentTypes/map
+--- PASS: TestCodec_WithDifferentTypes (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/string (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/int (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/slice (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/map (0.00s)
+PASS
+coverage: 100.0% of statements
+ok  	github.com/jeremyhahn/go-codec/pkg/cbor	1.035s	coverage: 100.0% of statements
+Running integration tests for factory...
+=== RUN   TestNew_JSON
+--- PASS: TestNew_JSON (0.00s)
+=== RUN   TestNew_YAML
+--- PASS: TestNew_YAML (0.00s)
+=== RUN   TestNew_TOML
+--- PASS: TestNew_TOML (0.00s)
+=== RUN   TestNew_MsgPack
+--- PASS: TestNew_MsgPack (0.00s)
+=== RUN   TestNew_BSON
+--- PASS: TestNew_BSON (0.00s)
+=== RUN   TestNew_CBOR
+--- PASS: TestNew_CBOR (0.00s)
+=== RUN   TestNew_Avro
+--- PASS: TestNew_Avro (0.00s)
+=== RUN   TestNew_ProtoBuf_Error
+--- PASS: TestNew_ProtoBuf_Error (0.00s)
+=== RUN   TestNew_Unsupported
+--- PASS: TestNew_Unsupported (0.00s)
+=== RUN   TestNewProtoBuf
+--- PASS: TestNewProtoBuf (0.00s)
+=== RUN   TestNew_EncodeDecodeStream
+--- PASS: TestNew_EncodeDecodeStream (0.00s)
+=== RUN   TestSupportedCodecs
+    factory_test.go:258: Supported codecs: [avro bson cbor json msgpack protobuf toml yaml]
+--- PASS: TestSupportedCodecs (0.00s)
+PASS
+coverage: 86.7% of statements
+ok  	github.com/jeremyhahn/go-codec/pkg/factory	1.040s	coverage: 86.7% of statements
+Running integration tests for json...
+=== RUN   TestOptimizedCodec_MarshalTo
+--- PASS: TestOptimizedCodec_MarshalTo (0.00s)
+=== RUN   TestOptimizedCodec_MarshalTo_NilBuffer
+--- PASS: TestOptimizedCodec_MarshalTo_NilBuffer (0.00s)
+=== RUN   TestOptimizedCodec_AppendMarshal
+--- PASS: TestOptimizedCodec_AppendMarshal (0.00s)
+=== RUN   TestOptimizedCodec_UnmarshalFrom
+--- PASS: TestOptimizedCodec_UnmarshalFrom (0.00s)
+=== RUN   TestOptimizedCodec_InvalidData
+--- PASS: TestOptimizedCodec_InvalidData (0.00s)
+=== RUN   TestOptimizedCodec_BufferReuse
+--- PASS: TestOptimizedCodec_BufferReuse (0.00s)
+=== RUN   TestOptimizedCodec_MarshalTo_Error
+--- PASS: TestOptimizedCodec_MarshalTo_Error (0.00s)
+=== RUN   TestOptimizedCodec_MarshalTo_SmallBuffer
+--- PASS: TestOptimizedCodec_MarshalTo_SmallBuffer (0.00s)
+=== RUN   TestOptimizedCodec_AppendMarshal_Error
+--- PASS: TestOptimizedCodec_AppendMarshal_Error (0.00s)
+=== RUN   TestNew
+--- PASS: TestNew (0.00s)
+=== RUN   TestCodec_Marshal
+--- PASS: TestCodec_Marshal (0.00s)
+=== RUN   TestCodec_Unmarshal
+--- PASS: TestCodec_Unmarshal (0.00s)
+=== RUN   TestCodec_Unmarshal_Invalid
+--- PASS: TestCodec_Unmarshal_Invalid (0.00s)
+=== RUN   TestCodec_Encode
+--- PASS: TestCodec_Encode (0.00s)
+=== RUN   TestCodec_Decode
+--- PASS: TestCodec_Decode (0.00s)
+=== RUN   TestCodec_Decode_Invalid
+--- PASS: TestCodec_Decode_Invalid (0.00s)
+=== RUN   TestCodec_WithDifferentTypes
+=== RUN   TestCodec_WithDifferentTypes/string
+=== RUN   TestCodec_WithDifferentTypes/int
+=== RUN   TestCodec_WithDifferentTypes/slice
+=== RUN   TestCodec_WithDifferentTypes/map
+--- PASS: TestCodec_WithDifferentTypes (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/string (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/int (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/slice (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/map (0.00s)
+PASS
+coverage: 100.0% of statements
+ok  	github.com/jeremyhahn/go-codec/pkg/json	1.037s	coverage: 100.0% of statements
+Running integration tests for msgpack...
+=== RUN   TestOptimizedCodec_MarshalTo
+--- PASS: TestOptimizedCodec_MarshalTo (0.00s)
+=== RUN   TestOptimizedCodec_MarshalTo_NilBuffer
+--- PASS: TestOptimizedCodec_MarshalTo_NilBuffer (0.00s)
+=== RUN   TestOptimizedCodec_AppendMarshal
+--- PASS: TestOptimizedCodec_AppendMarshal (0.00s)
+=== RUN   TestOptimizedCodec_UnmarshalFrom
+--- PASS: TestOptimizedCodec_UnmarshalFrom (0.00s)
+=== RUN   TestOptimizedCodec_InvalidData
+--- PASS: TestOptimizedCodec_InvalidData (0.00s)
+=== RUN   TestOptimizedCodec_BufferReuse
+--- PASS: TestOptimizedCodec_BufferReuse (0.00s)
+=== RUN   TestOptimizedCodec_MarshalTo_Error
+--- PASS: TestOptimizedCodec_MarshalTo_Error (0.00s)
+=== RUN   TestOptimizedCodec_MarshalTo_SmallBuffer
+--- PASS: TestOptimizedCodec_MarshalTo_SmallBuffer (0.00s)
+=== RUN   TestOptimizedCodec_AppendMarshal_Error
+--- PASS: TestOptimizedCodec_AppendMarshal_Error (0.00s)
+=== RUN   TestNew
+--- PASS: TestNew (0.00s)
+=== RUN   TestCodec_Marshal
+--- PASS: TestCodec_Marshal (0.00s)
+=== RUN   TestCodec_Unmarshal
+--- PASS: TestCodec_Unmarshal (0.00s)
+=== RUN   TestCodec_Unmarshal_Invalid
+--- PASS: TestCodec_Unmarshal_Invalid (0.00s)
+=== RUN   TestCodec_Encode
+--- PASS: TestCodec_Encode (0.00s)
+=== RUN   TestCodec_Decode
+--- PASS: TestCodec_Decode (0.00s)
+=== RUN   TestCodec_Decode_Invalid
+--- PASS: TestCodec_Decode_Invalid (0.00s)
+=== RUN   TestCodec_WithDifferentTypes
+=== RUN   TestCodec_WithDifferentTypes/string
+=== RUN   TestCodec_WithDifferentTypes/int
+=== RUN   TestCodec_WithDifferentTypes/slice
+=== RUN   TestCodec_WithDifferentTypes/map
+--- PASS: TestCodec_WithDifferentTypes (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/string (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/int (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/slice (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/map (0.00s)
+PASS
+coverage: 100.0% of statements
+ok  	github.com/jeremyhahn/go-codec/pkg/msgpack	1.038s	coverage: 100.0% of statements
+Running integration tests for pool...
+=== RUN   TestGetBytesBuffer
+--- PASS: TestGetBytesBuffer (0.00s)
+=== RUN   TestPutBytesBuffer_LargeBuffer
+--- PASS: TestPutBytesBuffer_LargeBuffer (0.00s)
+=== RUN   TestPutBytesBuffer_Nil
+--- PASS: TestPutBytesBuffer_Nil (0.00s)
+PASS
+coverage: 100.0% of statements
+ok  	github.com/jeremyhahn/go-codec/pkg/pool	(cached)	coverage: 100.0% of statements
+Running integration tests for protobuf...
+=== RUN   TestNew
+--- PASS: TestNew (0.00s)
+=== RUN   TestCodec_Marshal
+--- PASS: TestCodec_Marshal (0.00s)
+=== RUN   TestCodec_Unmarshal
+--- PASS: TestCodec_Unmarshal (0.00s)
+=== RUN   TestCodec_Unmarshal_Invalid
+--- PASS: TestCodec_Unmarshal_Invalid (0.00s)
+=== RUN   TestCodec_Encode
+--- PASS: TestCodec_Encode (0.00s)
+=== RUN   TestCodec_Decode
+--- PASS: TestCodec_Decode (0.00s)
+=== RUN   TestCodec_Decode_Invalid
+--- PASS: TestCodec_Decode_Invalid (0.00s)
+=== RUN   TestCodec_Decode_ReadError
+--- PASS: TestCodec_Decode_ReadError (0.00s)
+=== RUN   TestCodec_Encode_WriteError
+--- PASS: TestCodec_Encode_WriteError (0.00s)
+=== RUN   TestCodec_WithDifferentTypes
+=== RUN   TestCodec_WithDifferentTypes/string
+=== RUN   TestCodec_WithDifferentTypes/int
+=== RUN   TestCodec_WithDifferentTypes/slice
+=== RUN   TestCodec_WithDifferentTypes/map
+--- PASS: TestCodec_WithDifferentTypes (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/string (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/int (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/slice (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/map (0.00s)
+PASS
+coverage: 100.0% of statements
+ok  	github.com/jeremyhahn/go-codec/pkg/protobuf	1.036s	coverage: 100.0% of statements
+Running integration tests for toml...
+=== RUN   TestNew
+--- PASS: TestNew (0.00s)
+=== RUN   TestCodec_Marshal
+--- PASS: TestCodec_Marshal (0.00s)
+=== RUN   TestCodec_Unmarshal
+--- PASS: TestCodec_Unmarshal (0.00s)
+=== RUN   TestCodec_Unmarshal_Invalid
+--- PASS: TestCodec_Unmarshal_Invalid (0.00s)
+=== RUN   TestCodec_Marshal_Invalid
+--- PASS: TestCodec_Marshal_Invalid (0.00s)
+=== RUN   TestCodec_Encode
+--- PASS: TestCodec_Encode (0.00s)
+=== RUN   TestCodec_Decode
+--- PASS: TestCodec_Decode (0.00s)
+=== RUN   TestCodec_Decode_Invalid
+--- PASS: TestCodec_Decode_Invalid (0.00s)
+=== RUN   TestCodec_WithDifferentTypes
+=== RUN   TestCodec_WithDifferentTypes/string
+=== RUN   TestCodec_WithDifferentTypes/int
+=== RUN   TestCodec_WithDifferentTypes/slice
+=== RUN   TestCodec_WithDifferentTypes/map
+--- PASS: TestCodec_WithDifferentTypes (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/string (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/int (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/slice (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/map (0.00s)
+PASS
+coverage: 100.0% of statements
+ok  	github.com/jeremyhahn/go-codec/pkg/toml	1.033s	coverage: 100.0% of statements
+Running integration tests for yaml...
+=== RUN   TestNew
+--- PASS: TestNew (0.00s)
+=== RUN   TestCodec_Marshal
+--- PASS: TestCodec_Marshal (0.00s)
+=== RUN   TestCodec_Unmarshal
+--- PASS: TestCodec_Unmarshal (0.00s)
+=== RUN   TestCodec_Unmarshal_Invalid
+--- PASS: TestCodec_Unmarshal_Invalid (0.00s)
+=== RUN   TestCodec_Encode
+--- PASS: TestCodec_Encode (0.00s)
+=== RUN   TestCodec_Decode
+--- PASS: TestCodec_Decode (0.00s)
+=== RUN   TestCodec_Decode_Invalid
+--- PASS: TestCodec_Decode_Invalid (0.00s)
+=== RUN   TestCodec_Encode_WriteError
+--- PASS: TestCodec_Encode_WriteError (0.00s)
+=== RUN   TestCodec_WithDifferentTypes
+=== RUN   TestCodec_WithDifferentTypes/string
+=== RUN   TestCodec_WithDifferentTypes/int
+=== RUN   TestCodec_WithDifferentTypes/slice
+=== RUN   TestCodec_WithDifferentTypes/map
+--- PASS: TestCodec_WithDifferentTypes (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/string (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/int (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/slice (0.00s)
+    --- PASS: TestCodec_WithDifferentTypes/map (0.00s)
+PASS
+coverage: 100.0% of statements
+ok  	github.com/jeremyhahn/go-codec/pkg/yaml	1.034s	coverage: 100.0% of statements
