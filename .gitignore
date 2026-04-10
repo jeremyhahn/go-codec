@@ -28,3 +28,4 @@ examples/protobuf/protobuf
 .DS_Store
 Thumbs.db
 ci.log
+go.work.sum

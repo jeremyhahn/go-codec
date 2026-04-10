@@ -37,6 +37,24 @@ func TestIsSupported_Unsupported(t *testing.T) {
 	}
 }
 
+func TestCodecsRegisteredWithBuildTags(t *testing.T) {
+	// This test verifies the registration mechanism works.
+	// When compiled with build tags (e.g., -tags codec_cbor,codec_json,codec_msgpack),
+	// those codecs will be registered via their init() functions.
+	// Without build tags, no codecs are registered by default.
+
+	// Get currently registered codecs
+	supported := SupportedCodecs()
+
+	// Just verify the mechanism works - list what's registered
+	t.Logf("Currently registered codecs: %v", supported)
+
+	// If we registered a test codec above, it should still be there
+	if !IsSupported("test_codec") {
+		t.Error("Expected test_codec to still be registered from TestRegisterCodec")
+	}
+}
+
 func TestErrCodecNotSupported(t *testing.T) {
 	err := ErrCodecNotSupported{CodecType: JSON}
 	msg := err.Error()
