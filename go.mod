@@ -7,7 +7,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.9.0
 	github.com/hamba/avro/v2 v2.30.0
 	github.com/vmihailenco/msgpack/v5 v5.4.1
-	go.mongodb.org/mongo-driver v1.17.6
+	go.mongodb.org/mongo-driver v1.17.7
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v3 v3.0.1
 )
