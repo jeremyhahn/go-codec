@@ -1,5 +1,5 @@
 # Dockerfile for go-codec development and examples
-FROM golang:1.26.5-bookworm
+FROM golang:1.26.6-bookworm
 
 # Install protobuf compiler and dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
