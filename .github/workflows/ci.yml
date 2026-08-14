@@ -208,12 +208,10 @@ jobs:
             -exclude-dir=testdata \
             -tags "${{ env.BUILD_TAGS }}" \
             -fmt sarif -out gosec-results.sarif ./...
-        continue-on-error: true
 
       - name: Upload gosec results to GitHub Security
         uses: github/codeql-action/upload-sarif@v4
         if: github.server_url == 'https://github.com'
-        continue-on-error: true
         with:
           sarif_file: gosec-results.sarif
           category: gosec
