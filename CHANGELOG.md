@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.4.0] - 2026-08-14
 
 ### Removed — BREAKING: the Avro codec is gone
 
@@ -28,6 +28,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   Callers needing Avro should depend on an Avro library directly, so the
   security trade-off is theirs to make explicitly.
+
+#### Versioning note — a deliberate deviation from SemVer 2.0.0
+
+Removing exported API (`codec.Avro` and the whole `pkg/avro` package) from a
+`1.x` module is a MAJOR change under SemVer 2.0.0, which this project otherwise
+follows. Under Go's semantic import versioning a major bump would also require
+the module path to become `github.com/jeremyhahn/go-codec/v2`, changing every
+import line in every consumer.
+
+This release is **1.4.0 instead of 2.0.0**, by owner decision on 2026-08-14, on
+two grounds: no consumer used the removed API — every dependent pinned
+`go-codec v1.3.1` and none imported `pkg/avro` or referenced `codec.Avro`, so
+real-world breakage is zero — and the module is pre-publication, with no
+external users whose builds could break.
+
+Recorded here explicitly so it does not become precedent. Once this module is
+published, exported-API removals take a major bump and the `/v2` path with it.
 
 ## [1.3.0] - 2025-01-10
 
