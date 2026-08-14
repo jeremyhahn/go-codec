@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/jeremyhahn/go-codec"
-	avrocodec "github.com/jeremyhahn/go-codec/pkg/avro"
 	bsoncodec "github.com/jeremyhahn/go-codec/pkg/bson"
 	cborcodec "github.com/jeremyhahn/go-codec/pkg/cbor"
 	jsoncodec "github.com/jeremyhahn/go-codec/pkg/json"
@@ -41,8 +40,6 @@ func New[T any](codecType codec.Type) (codec.Codec[T], error) {
 		return bsoncodec.New[T](), nil
 	case codec.CBOR:
 		return cborcodec.New[T](), nil
-	case codec.Avro:
-		return avrocodec.New[T](), nil
 	case codec.ProtoBuf:
 		return nil, fmt.Errorf("use NewProtoBuf for Protocol Buffers (requires proto.Message)")
 	default:

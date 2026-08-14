@@ -12,7 +12,6 @@ go-codec/
 │   ├── msgpack/          # MessagePack codec
 │   ├── bson/             # BSON codec
 │   ├── cbor/             # CBOR codec
-│   ├── avro/             # Avro codec
 │   ├── protobuf/         # Protocol Buffers codec
 │   └── factory/          # Runtime codec selection
 ├── examples/

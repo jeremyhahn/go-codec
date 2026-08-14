@@ -1,4 +1,4 @@
-//go:build codec_json && codec_yaml && codec_toml && codec_msgpack && codec_bson && codec_cbor && codec_avro && codec_protobuf
+//go:build codec_json && codec_yaml && codec_toml && codec_msgpack && codec_bson && codec_cbor && codec_protobuf
 
 package factory
 
@@ -11,8 +11,8 @@ import (
 )
 
 type TestData struct {
-	Name  string `json:"name" yaml:"name" toml:"name" msgpack:"name" avro:"name"`
-	Value int    `json:"value" yaml:"value" toml:"value" msgpack:"value" avro:"value"`
+	Name  string `json:"name" yaml:"name" toml:"name" msgpack:"name"`
+	Value int    `json:"value" yaml:"value" toml:"value" msgpack:"value"`
 }
 
 func TestNew_JSON(t *testing.T) {
@@ -129,28 +129,6 @@ func TestNew_CBOR(t *testing.T) {
 	c, err := New[TestData](codec.CBOR)
 	if err != nil {
 		t.Fatalf("Failed to create CBOR codec: %v", err)
-	}
-
-	data := TestData{Name: "test", Value: 42}
-	encoded, err := c.Marshal(data)
-	if err != nil {
-		t.Fatalf("Failed to marshal: %v", err)
-	}
-
-	var decoded TestData
-	if err := c.Unmarshal(encoded, &decoded); err != nil {
-		t.Fatalf("Failed to unmarshal: %v", err)
-	}
-
-	if decoded.Name != data.Name || decoded.Value != data.Value {
-		t.Errorf("Data mismatch: got %+v, want %+v", decoded, data)
-	}
-}
-
-func TestNew_Avro(t *testing.T) {
-	c, err := New[TestData](codec.Avro)
-	if err != nil {
-		t.Fatalf("Failed to create Avro codec: %v", err)
 	}
 
 	data := TestData{Name: "test", Value: 42}

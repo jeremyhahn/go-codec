@@ -2,7 +2,7 @@
 
 ## Testing
 - `make test` - Run all unit tests (with race detection and coverage)
-- `make test-<pkg>` - Test specific codec (e.g., `make test-json`, `make test-avro`)
+- `make test-<pkg>` - Test specific codec (e.g., `make test-json`, `make test-cbor`)
 - `make integration-test` - Run all integration tests
 - `make integration-test-<pkg>` - Integration test specific codec
 
@@ -34,7 +34,7 @@
 - `make ci` - CI in Docker
 
 ## Codec Selection
-- `make build WITH_CODEC_AVRO=0 WITH_CODEC_PROTOBUF=0` - Exclude specific codecs
+- `make build WITH_CODEC_CBOR=0 WITH_CODEC_PROTOBUF=0` - Exclude specific codecs
 
 ## Clean
 - `make clean` - Clean all generated/temp files

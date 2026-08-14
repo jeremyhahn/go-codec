@@ -17,7 +17,6 @@ run:
     - codec_msgpack
     - codec_bson
     - codec_cbor
-    - codec_avro
     - codec_protobuf
 
 linters:

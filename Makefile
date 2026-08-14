@@ -15,7 +15,6 @@ WITH_CODEC_TOML     ?= 1
 WITH_CODEC_MSGPACK  ?= 1
 WITH_CODEC_BSON     ?= 1
 WITH_CODEC_CBOR     ?= 1
-WITH_CODEC_AVRO     ?= 1
 WITH_CODEC_PROTOBUF ?= 1
 
 # Build the codec build tags based on WITH_CODEC_X variables
@@ -37,9 +36,6 @@ ifeq ($(WITH_CODEC_BSON),1)
 endif
 ifeq ($(WITH_CODEC_CBOR),1)
     CODEC_TAGS += codec_cbor
-endif
-ifeq ($(WITH_CODEC_AVRO),1)
-    CODEC_TAGS += codec_avro
 endif
 ifeq ($(WITH_CODEC_PROTOBUF),1)
     CODEC_TAGS += codec_protobuf
@@ -92,7 +88,7 @@ all: build
 test: $(TEST_TARGETS)
 
 # Generic test target for any package in pkg/
-# Usage: make test-json, make test-avro, make test-cbor, etc.
+# Usage: make test-json, make test-cbor, make test-yaml, etc.
 .PHONY: $(TEST_TARGETS)
 $(TEST_TARGETS): test-%:
 	@echo "Running tests for $*..."
@@ -107,7 +103,7 @@ $(TEST_TARGETS): test-%:
 integration-test: $(INTEGRATION_TEST_TARGETS)
 
 # Generic integration test target for any package in pkg/
-# Usage: make integration-test-json, make integration-test-avro, etc.
+# Usage: make integration-test-json, make integration-test-cbor, etc.
 # Runs tests with integration build tag
 .PHONY: $(INTEGRATION_TEST_TARGETS)
 $(INTEGRATION_TEST_TARGETS): integration-test-%:
@@ -123,7 +119,7 @@ $(INTEGRATION_TEST_TARGETS): integration-test-%:
 coverage: $(COVERAGE_TARGETS)
 
 # Generic coverage target for any package in pkg/
-# Usage: make coverage-json, make coverage-avro, etc.
+# Usage: make coverage-json, make coverage-cbor, etc.
 .PHONY: $(COVERAGE_TARGETS)
 $(COVERAGE_TARGETS): coverage-%:
 	@echo "Coverage for $*:"
@@ -154,7 +150,7 @@ bench: $(BENCH_TARGETS)
 bench-all: bench
 
 # Generic benchmark target for any package in pkg/
-# Usage: make bench-json, make bench-avro, make bench-msgpack, etc.
+# Usage: make bench-json, make bench-cbor, make bench-msgpack, etc.
 .PHONY: $(BENCH_TARGETS)
 $(BENCH_TARGETS): bench-%:
 	@echo "Running benchmarks for $*..."
@@ -536,15 +532,15 @@ help:
 	@echo "  WITH_CODEC_JSON=$(WITH_CODEC_JSON)       WITH_CODEC_YAML=$(WITH_CODEC_YAML)"
 	@echo "  WITH_CODEC_TOML=$(WITH_CODEC_TOML)       WITH_CODEC_MSGPACK=$(WITH_CODEC_MSGPACK)"
 	@echo "  WITH_CODEC_BSON=$(WITH_CODEC_BSON)       WITH_CODEC_CBOR=$(WITH_CODEC_CBOR)"
-	@echo "  WITH_CODEC_AVRO=$(WITH_CODEC_AVRO)       WITH_CODEC_PROTOBUF=$(WITH_CODEC_PROTOBUF)"
+	@echo "  WITH_CODEC_PROTOBUF=$(WITH_CODEC_PROTOBUF)"
 	@echo ""
-	@echo "Example: make build WITH_CODEC_AVRO=0 WITH_CODEC_PROTOBUF=0"
+	@echo "Example: make build WITH_CODEC_CBOR=0 WITH_CODEC_PROTOBUF=0"
 	@echo ""
 	@echo "All targets support any package in pkg/ via templates."
 	@echo ""
 	@echo "Test targets:"
 	@echo "  make test                    - Run all unit tests"
-	@echo "  make test-<pkg>              - Run tests for package (e.g., test-json, test-avro)"
+	@echo "  make test-<pkg>              - Run tests for package (e.g., test-json, test-cbor)"
 	@echo "  make integration-test        - Run all integration tests"
 	@echo "  make integration-test-<pkg>  - Run integration tests for package"
 	@echo ""

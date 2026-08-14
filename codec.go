@@ -13,7 +13,6 @@ const (
 	ProtoBuf Type = "protobuf"
 	BSON     Type = "bson"
 	CBOR     Type = "cbor"
-	Avro     Type = "avro"
 )
 
 // Codec defines the interface for encoding and decoding operations

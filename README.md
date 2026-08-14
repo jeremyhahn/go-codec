@@ -6,7 +6,7 @@ A generic codec library for Go with a unified API across multiple serialization 
 
 - **Unified API** - Same interface for all formats
 - **Go Generics** - Type-safe encoding/decoding
-- **8 Formats** - JSON, YAML, TOML, MessagePack, BSON, CBOR, Avro, Protocol Buffers
+- **7 Formats** - JSON, YAML, TOML, MessagePack, BSON, CBOR, Protocol Buffers
 - **Modular Imports** - Only import the codecs you need
 - **Conditional Compilation** - Exclude codecs via build tags
 - **100% Test Coverage**
@@ -70,7 +70,6 @@ data, _ := c.Marshal(user)
 | MessagePack | `pkg/msgpack` | `msgpack:"name"` |
 | BSON | `pkg/bson` | `bson:"name"` |
 | CBOR | `pkg/cbor` | `cbor:"name"` |
-| Avro | `pkg/avro` | `avro:"name"` |
 | Protocol Buffers | `pkg/protobuf` | (generated) |
 
 ## Conditional Compilation
@@ -78,8 +77,8 @@ data, _ := c.Marshal(user)
 Exclude codecs at build time to reduce binary size:
 
 ```bash
-# Build without Avro and Protobuf
-make build WITH_CODEC_AVRO=0 WITH_CODEC_PROTOBUF=0
+# Build without CBOR and Protobuf
+make build WITH_CODEC_CBOR=0 WITH_CODEC_PROTOBUF=0
 
 # Or with go build
 go build -tags "codec_json,codec_yaml"
@@ -94,8 +93,8 @@ for _, c := range codec.SupportedCodecs() {
     fmt.Println(c) // prints only compiled-in codecs
 }
 
-if codec.IsSupported(codec.Avro) {
-    // use Avro
+if codec.IsSupported(codec.CBOR) {
+    // use CBOR
 }
 ```
 
@@ -163,7 +162,6 @@ Benchmark results (ns/op, lower is better):
 | Format | Marshal | Unmarshal |
 |--------|---------|-----------|
 | Protocol Buffers | 219 | 245 |
-| Avro | 420 | 221 |
 | CBOR | 668 | 792 |
 | JSON | 874 | 2,036 |
 | MessagePack | 1,062 | 803 |
@@ -183,7 +181,6 @@ See the [docs/](./docs/) directory for detailed documentation on each codec:
 - [MessagePack](./docs/msgpack.md) - With buffer reuse methods
 - [BSON](./docs/bson.md)
 - [CBOR](./docs/cbor.md)
-- [Avro](./docs/avro.md) - With automatic schema inference
 - [Protocol Buffers](./docs/protobuf.md)
 
 ## Development

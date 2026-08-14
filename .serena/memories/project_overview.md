@@ -6,7 +6,7 @@ Generic codec library for Go with a unified API across multiple serialization fo
 Provides type-safe encoding/decoding via Go generics with a unified interface. Supports runtime codec selection via factory pattern and conditional compilation via build tags.
 
 ## Supported Formats
-JSON, YAML, TOML, MessagePack, BSON, CBOR, Avro, Protocol Buffers
+JSON, YAML, TOML, MessagePack, BSON, CBOR, Protocol Buffers
 
 ## Tech Stack
 - Language: Go 1.25.5
@@ -20,7 +20,7 @@ JSON, YAML, TOML, MessagePack, BSON, CBOR, Avro, Protocol Buffers
 
 ## Architecture
 - `codec.go` / `supported.go` - Root package with codec type definitions
-- `pkg/{json,yaml,toml,msgpack,bson,cbor,avro,protobuf}/` - Per-format implementations
+- `pkg/{json,yaml,toml,msgpack,bson,cbor,protobuf}/` - Per-format implementations
 - `pkg/factory/` - Runtime codec selection factory
 - `examples/` - Usage examples including protobuf
 - Each codec can be excluded via `WITH_CODEC_X=0` build flags

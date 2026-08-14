@@ -11,9 +11,9 @@ import (
 
 // Person demonstrates struct tags for all supported codecs
 type Person struct {
-	Name  string `json:"name" yaml:"name" toml:"name" msgpack:"name" bson:"name" cbor:"name" avro:"name"`
-	Age   int    `json:"age" yaml:"age" toml:"age" msgpack:"age" bson:"age" cbor:"age" avro:"age"`
-	Email string `json:"email" yaml:"email" toml:"email" msgpack:"email" bson:"email" cbor:"email" avro:"email"`
+	Name  string `json:"name" yaml:"name" toml:"name" msgpack:"name" bson:"name" cbor:"name"`
+	Age   int    `json:"age" yaml:"age" toml:"age" msgpack:"age" bson:"age" cbor:"age"`
+	Email string `json:"email" yaml:"email" toml:"email" msgpack:"email" bson:"email" cbor:"email"`
 }
 
 func main() {
@@ -47,9 +47,6 @@ func main() {
 
 	fmt.Println("\n--- CBOR ---")
 	demoBinaryCodec(codec.CBOR, person)
-
-	fmt.Println("\n--- Avro ---")
-	demoBinaryCodec(codec.Avro, person)
 
 	fmt.Println("\n=== Demo Complete ===")
 	fmt.Println("See examples/protobuf/ for Protocol Buffers example.")
