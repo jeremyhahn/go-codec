@@ -274,21 +274,35 @@ security: gosec vuln modverify trivy trivy-image
 
 # gosec + govulncheck. Kept as its own target so `make security` composes it
 # with the trivy scans below rather than duplicating the invocations.
+#
+# GOSEC_FLAGS stays identical to the gosec step in .github/workflows/ci.yml --
+# devops.md §8 makes `make security` the contract CI runs, so the two drifting
+# apart means a developer's "clean" run proves nothing. -tags is the
+# load-bearing part: every codec lives behind a codec_* build tag, so without
+# it the implementations compile out and both scanners silently pass over them.
+# No -exclude rules: the only unsafe usage in the tree is in protoc-generated
+# *.pb.go, which -exclude-generated already drops, so a blanket -exclude=G103
+# would buy nothing and hide hand-written unsafe if any ever landed.
+GOSEC_FLAGS := -exclude-generated -severity medium -confidence medium \
+	-exclude-dir=testdata -tags "$(BUILD_TAGS)"
+
+# Each target resolves the binary once and runs it once. The previous
+# `(which tool && tool ...) || $(GOPATH)/bin/tool ...` form treated a scanner
+# that ran and *found something* as "not on PATH" and scanned the whole tree a
+# second time, doubling the output of every real failure.
 .PHONY: gosec vuln
 gosec:
 	@echo "Running security scan with gosec..."
-	@which gosec > /dev/null || test -f $$(go env GOPATH)/bin/gosec || \
-		(echo "gosec not installed. Install with: go install github.com/securego/gosec/v2/cmd/gosec@latest" && exit 1)
-	@(which gosec > /dev/null && gosec -exclude=G103 -exclude-dir=testdata -tests=false -fmt=text ./...) || \
-		$$(go env GOPATH)/bin/gosec -exclude=G103 -exclude-dir=testdata -tests=false -fmt=text ./...
+	@BIN=$$(command -v gosec || echo $$(go env GOPATH)/bin/gosec); \
+	test -x "$$BIN" || { echo "gosec not installed. Install with: go install github.com/securego/gosec/v2/cmd/gosec@latest"; exit 1; }; \
+	"$$BIN" $(GOSEC_FLAGS) -fmt=text ./...
 
 vuln:
 	@echo ""
 	@echo "Checking for known vulnerabilities..."
-	@which govulncheck > /dev/null || test -f $$(go env GOPATH)/bin/govulncheck || \
-		(echo "govulncheck not installed. Install with: go install golang.org/x/vuln/cmd/govulncheck@latest" && exit 1)
-	@(which govulncheck > /dev/null && govulncheck ./...) || \
-		$$(go env GOPATH)/bin/govulncheck ./...
+	@BIN=$$(command -v govulncheck || echo $$(go env GOPATH)/bin/govulncheck); \
+	test -x "$$BIN" || { echo "govulncheck not installed. Install with: go install golang.org/x/vuln/cmd/govulncheck@latest"; exit 1; }; \
+	"$$BIN" -tags "$(BUILD_TAGS)" ./...
 
 # Module integrity against go.sum.
 .PHONY: modverify

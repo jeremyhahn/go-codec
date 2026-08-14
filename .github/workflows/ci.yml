@@ -199,14 +199,23 @@ jobs:
       - name: Install gosec
         run: go install github.com/securego/gosec/v2/cmd/gosec@latest
 
+      # CUSTOMIZE (with justification): this arg list is the same one the
+      # Makefile's GOSEC_FLAGS carries -- devops.md §8 makes `make security`
+      # the contract, so they must not drift. There are deliberately no
+      # -exclude rules: the tree's only unsafe usage is in protoc-generated
+      # *.pb.go, which -exclude-generated already drops, so the -exclude=G103
+      # that used to sit here was redundant and would have masked hand-written
+      # unsafe. -stdout -verbose text mirrors the findings into the job log:
+      # on Gitea the SARIF upload step is skipped, so without it a real finding
+      # produces an exit code and no diagnostics.
       - name: Run gosec security scanner
         run: |
-          gosec -exclude=G103 \
-            -exclude-generated \
+          gosec -exclude-generated \
             -severity medium \
             -confidence medium \
             -exclude-dir=testdata \
             -tags "${{ env.BUILD_TAGS }}" \
+            -stdout -verbose text \
             -fmt sarif -out gosec-results.sarif ./...
 
       - name: Upload gosec results to GitHub Security
