@@ -1,3 +1,8 @@
+# ci-template: v1 (customized)
+# Reconciled against software/templates/github-actions/ci.yml in the
+# automatethethings repo (devops.md §1/§8/§9). Divergence outside the
+# repo-specific blocks below is a defect.
+
 name: CI
 
 on:
@@ -149,10 +154,12 @@ jobs:
       - name: Run go vet
         run: go vet -tags "${{ env.BUILD_TAGS }}" ./...
 
+      # Latest action major and latest linter: devops.md §9. No version pin --
+      # an undocumented pin is a defect, and there is no reason to hold one here.
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v7
+        uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.7.2
+          version: latest
           args: --timeout=5m --build-tags "${{ env.BUILD_TAGS }}"
 
   # Job 3: Security Scanning
@@ -406,3 +413,28 @@ jobs:
             go test -tags "${{ env.BUILD_TAGS }}" -bench=. -benchmem -run=^$ ./pkg/$pkg || true
             echo ""
           done
+
+  # The single required check (devops.md §1). Every job above appears in BOTH
+  # the needs list and the results check -- a gate that can pass vacuously is
+  # worse than no gate. join(needs.*.result) is deliberately not used: it
+  # evaluates empty on Gitea and reports success while jobs fail.
+  ci-gate:
+    name: CI Gate
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [test, lint, security, trivy, trivy-image, build, race, benchmark]
+
+    steps:
+      - name: Fail closed on any non-success
+        run: |
+          check() { case "$2" in success) echo "OK   $1";; *) echo "FAIL $1 ($2)"; BAD=1;; esac; }
+          BAD=0
+          check test        "${{ needs.test.result }}"
+          check lint        "${{ needs.lint.result }}"
+          check security    "${{ needs.security.result }}"
+          check trivy       "${{ needs.trivy.result }}"
+          check trivy-image "${{ needs.trivy-image.result }}"
+          check build       "${{ needs.build.result }}"
+          check race        "${{ needs.race.result }}"
+          check benchmark   "${{ needs.benchmark.result }}"
+          exit $BAD
