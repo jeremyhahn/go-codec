@@ -265,20 +265,79 @@ lint:
 	@(which golangci-lint > /dev/null && golangci-lint run --timeout=5m ./...) || \
 		$$(go env GOPATH)/bin/golangci-lint run --timeout=5m ./...
 
-# Security scanning
+# Security scanning — the full devops.md §8 suite.
+# gosec, govulncheck, go mod verify, trivy fs, trivy image.
 .PHONY: security
-security:
+security: gosec vuln modverify trivy trivy-image
+	@echo ""
+	@echo "Security suite passed"
+
+# gosec + govulncheck. Kept as its own target so `make security` composes it
+# with the trivy scans below rather than duplicating the invocations.
+.PHONY: gosec vuln
+gosec:
 	@echo "Running security scan with gosec..."
 	@which gosec > /dev/null || test -f $$(go env GOPATH)/bin/gosec || \
 		(echo "gosec not installed. Install with: go install github.com/securego/gosec/v2/cmd/gosec@latest" && exit 1)
 	@(which gosec > /dev/null && gosec -exclude=G103 -exclude-dir=testdata -tests=false -fmt=text ./...) || \
 		$$(go env GOPATH)/bin/gosec -exclude=G103 -exclude-dir=testdata -tests=false -fmt=text ./...
+
+vuln:
 	@echo ""
 	@echo "Checking for known vulnerabilities..."
 	@which govulncheck > /dev/null || test -f $$(go env GOPATH)/bin/govulncheck || \
 		(echo "govulncheck not installed. Install with: go install golang.org/x/vuln/cmd/govulncheck@latest" && exit 1)
 	@(which govulncheck > /dev/null && govulncheck ./...) || \
 		$$(go env GOPATH)/bin/govulncheck ./...
+
+# Module integrity against go.sum.
+.PHONY: modverify
+modverify:
+	@echo ""
+	@echo "Verifying module integrity..."
+	@go mod verify
+
+# Filesystem CVE/secret scan, gated on CRITICAL/HIGH. examples/ is skipped:
+# it is demo code that never ships to a consumer of the library.
+.PHONY: trivy
+trivy:
+	@command -v trivy >/dev/null 2>&1 || { \
+		echo "trivy not installed - skipping filesystem scan (see https://trivy.dev/latest/getting-started/installation/)"; \
+		exit 0; \
+	}; \
+	echo "Running trivy filesystem scan..."; \
+	trivy fs --scanners vuln,secret --severity CRITICAL,HIGH --exit-code 1 --skip-dirs examples .
+
+# Image scan of the only container this repo builds: the local development /
+# CI-tooling image (golang:<stable>-bookworm + protoc + the linters), which
+# `make ci` builds, runs `make ci-local` inside, and discards. It is never
+# pushed to a registry.
+#
+# Two scoping decisions, both deliberate:
+#
+#   --ignore-unfixed  The Debian package set is upstream's. A CVE with no
+#                     released fix cannot be actioned by rebuilding and would
+#                     pin this gate permanently red; a CVE that HAS a fix
+#                     means the base is stale, which is a real finding.
+#   --skip-dirs       go/bin, go/pkg/mod and usr/local/go hold the upstream
+#                     release builds of golangci-lint/gosec/govulncheck and
+#                     their module cache, baked in only so the container can
+#                     run the checks. Their embedded stdlib version is a
+#                     property of someone else's release build, not of
+#                     go-codec, and gosec's own hardcoded_credentials.go rule
+#                     fixture trips the secret scanner. Nothing under them
+#                     reaches a consumer.
+#
+# Everything go-codec actually ships is gated unconditionally by `make trivy`
+# and govulncheck.
+.PHONY: trivy-image
+trivy-image:
+	@command -v docker >/dev/null 2>&1 || { echo "docker not installed - skipping image scan"; exit 0; }; \
+	command -v trivy >/dev/null 2>&1 || { echo "trivy not installed - skipping image scan"; exit 0; }; \
+	echo "Building and scanning container image..."; \
+	docker build -t go-codec:security . && \
+	trivy image --scanners vuln,secret --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 \
+		--skip-dirs go/bin --skip-dirs go/pkg/mod --skip-dirs usr/local/go go-codec:security
 
 # Format code
 .PHONY: fmt

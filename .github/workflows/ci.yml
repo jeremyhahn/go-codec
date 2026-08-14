@@ -186,6 +186,9 @@ jobs:
           make generate
           make generate-examples
 
+      - name: Verify module integrity
+        run: go mod verify
+
       - name: Install gosec
         run: go install github.com/securego/gosec/v2/cmd/gosec@latest
 
@@ -212,6 +215,93 @@ jobs:
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
           govulncheck -tags "${{ env.BUILD_TAGS }}" ./...
+
+  # Job 3b: Trivy (dependency CVEs + leaked secrets in the tree)
+  trivy:
+    name: Trivy
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Two paths for one gate (devops.md §8). trivy-action's setup step cannot
+      # authenticate to github.com from a Gitea runner and upload-sarif has no
+      # GHES-compatible endpoint there, so the action path is guarded on the
+      # server URL and Gitea gates with the trivy CLI below. Both run the same
+      # fs scan at the same severity; only the SARIF upload is GitHub-only.
+      # examples/ is skipped: it is demo code that never ships to a consumer.
+      - name: Trivy scan (SARIF for code scanning)
+        if: github.server_url == 'https://github.com'
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret
+          format: sarif
+          output: trivy-results.sarif
+          exit-code: 0
+          skip-dirs: examples
+          trivyignores: .trivyignore
+
+      - name: Upload Trivy SARIF
+        if: github.server_url == 'https://github.com'
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-results.sarif
+          category: trivy-fs
+
+      - name: Trivy gate (fail on CRITICAL/HIGH)
+        if: github.server_url == 'https://github.com'
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret
+          severity: CRITICAL,HIGH
+          exit-code: 1
+          format: table
+          skip-dirs: examples
+          trivyignores: .trivyignore
+
+      - name: Install Trivy CLI (Gitea)
+        if: github.server_url != 'https://github.com'
+        run: curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
+      - name: Trivy gate (Gitea)
+        if: github.server_url != 'https://github.com'
+        run: trivy fs --scanners vuln,secret --severity CRITICAL,HIGH --exit-code 1 --skip-dirs examples .
+
+  # Job 3c: Trivy image scan of the CI/tooling image this repo builds
+  trivy-image:
+    name: Trivy Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t go-codec:ci .
+
+      - name: Install Trivy CLI
+        run: curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
+
+      # Scoping is documented against the trivy-image target in the Makefile;
+      # keep the two invocations identical. --ignore-unfixed because the Debian
+      # package set is upstream's and an unfixed advisory cannot be actioned by
+      # rebuilding; --skip-dirs because go/bin, go/pkg/mod and usr/local/go hold
+      # upstream release builds of the linters (and gosec's own credential-rule
+      # fixture, which trips the secret scanner), baked in only so the container
+      # can run the checks. The Go module tree is gated unconditionally by the
+      # trivy fs job above.
+      - name: Trivy image gate (fail on fixable CRITICAL/HIGH)
+        run: |
+          trivy image --scanners vuln,secret --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 \
+            --skip-dirs go/bin --skip-dirs go/pkg/mod --skip-dirs usr/local/go go-codec:ci
 
   # Job 4: Build
   build:

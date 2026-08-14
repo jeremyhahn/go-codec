@@ -1,0 +1,19 @@
+# Trivy ignore list for go-codec.
+#
+# The gate has two parts (conventions/devops.md §8):
+#
+#   trivy fs     — SOURCE scan of the shipped Go module, failing on
+#                  CRITICAL/HIGH. examples/ is skipped; it is demo code that
+#                  never ships to a consumer of the library.
+#   trivy image  — the CI/tooling image this repo builds (golang:<stable>-
+#                  bookworm plus protoc), failing on FIXABLE CRITICAL/HIGH.
+#                  Unfixed Debian advisories are excluded there because no
+#                  rebuild can action them; a fixable one means the base is
+#                  stale and is a real finding.
+#
+# Add specific advisory IDs below ONLY when a finding is confirmed
+# not-applicable or unfixable, with a one-line justification AND the date it
+# was accepted. An entry without both is a defect.
+#
+# Example:
+# CVE-XXXX-XXXXX  # 2026-01-01 <reason this advisory does not apply to go-codec>

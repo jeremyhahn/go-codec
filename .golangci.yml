@@ -1,0 +1,97 @@
+# golangci-lint v2 configuration for go-codec.
+#
+# conventions/devops.md §8 requires staticcheck, errcheck, unused, ineffassign,
+# misspell and gocritic to be enabled here — installing the umbrella with the
+# security linters off does not satisfy that section.
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  # Every codec is behind a build tag; without these the linter sees an empty
+  # package set. Keep in sync with BUILD_TAGS in the Makefile and ci.yml.
+  build-tags:
+    - codec_json
+    - codec_yaml
+    - codec_toml
+    - codec_msgpack
+    - codec_bson
+    - codec_cbor
+    - codec_avro
+    - codec_protobuf
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - misspell
+    - gocritic
+    - gosec
+    - bodyclose
+    - whitespace
+
+  settings:
+    errcheck:
+      check-type-assertions: false
+      check-blank: false
+
+    gocritic:
+      # Default check set only. The style/opinionated/experimental tags are
+      # taste, not defects, and turning them on here buys noise rather than
+      # signal.
+      disabled-checks:
+        - ifElseChain
+
+    gosec:
+      excludes:
+        # The zero-copy paths in pkg/msgpack and pkg/protobuf convert between
+        # []byte and string through unsafe with the lifetime of the backing
+        # array held by the caller. Audited; the same exclusion is applied to
+        # the gosec invocation in the Makefile and ci.yml.
+        - G103
+
+    misspell:
+      locale: US
+
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - std-error-handling
+    rules:
+      # Test files and generated protobuf fixtures.
+      - path: _test\.go
+        linters:
+          - errcheck
+          - gocritic
+          - gosec
+          - staticcheck
+      - path: testdata/
+        linters:
+          - errcheck
+          - gocritic
+          - gosec
+          - staticcheck
+          - unused
+      # examples/ is demo code: it prints, ignores errors for brevity, and
+      # never ships to a consumer.
+      - path: examples/
+        linters:
+          - errcheck
+          - gocritic
+          - gosec
+
+# goimports is deliberately NOT enabled as a formatter: the tree groups the
+# `codec "github.com/jeremyhahn/go-codec"` self-import with the third-party
+# block, which goimports' local-prefix grouping would rewrite across every
+# codec package. gofmt is the formatting gate here and in `make fmt-check`.
+formatters:
+  enable:
+    - gofmt
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
