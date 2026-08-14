@@ -35,7 +35,7 @@ func getOrCreateSchema(t reflect.Type) avro.Schema {
 	}
 
 	// Handle pointer types - get underlying type
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 
@@ -61,7 +61,7 @@ func getOrCreateSchema(t reflect.Type) avro.Schema {
 // generateSchema creates an Avro schema from a Go type
 func generateSchema(t reflect.Type) avro.Schema {
 	// Handle pointer types
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Pointer {
 		// Nullable type: union of null and the element type
 		elemSchema := generateSchema(t.Elem())
 		union, _ := avro.NewUnionSchema([]avro.Schema{
@@ -158,7 +158,7 @@ func generateRecordSchema(t reflect.Type) avro.Schema {
 		var avroField *avro.Field
 		var err error
 
-		if field.Type.Kind() == reflect.Ptr {
+		if field.Type.Kind() == reflect.Pointer {
 			// Pointer fields have null as default
 			avroField, err = avro.NewField(fieldName, fieldSchema, avro.WithDefault(nil))
 		} else {
