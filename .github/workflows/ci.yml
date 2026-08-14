@@ -7,7 +7,7 @@ on:
     branches: [ master, main, develop ]
 
 env:
-  GO_VERSION: '1.25.5'
+  GO_VERSION: '1.26.5'
   COVERAGE_THRESHOLD: 95
   BUILD_TAGS: 'codec_json,codec_yaml,codec_toml,codec_msgpack,codec_bson,codec_cbor,codec_avro,codec_protobuf'
 

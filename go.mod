@@ -1,6 +1,6 @@
 module github.com/jeremyhahn/go-codec
 
-go 1.25.5
+go 1.26.5
 
 require (
 	github.com/BurntSushi/toml v1.6.0
