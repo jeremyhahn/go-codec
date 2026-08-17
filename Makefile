@@ -345,7 +345,7 @@ trivy-image:
 	@command -v docker >/dev/null 2>&1 || { echo "docker not installed - skipping image scan"; exit 0; }; \
 	command -v trivy >/dev/null 2>&1 || { echo "trivy not installed - skipping image scan"; exit 0; }; \
 	echo "Building and scanning container image..."; \
-	docker build -t go-codec:security . && \
+	docker build --pull -t go-codec:security . && \
 	trivy image --scanners vuln,secret --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 \
 		--skip-dirs go/bin --skip-dirs go/pkg/mod --skip-dirs usr/local/go go-codec:security
 
