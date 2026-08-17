@@ -2,7 +2,7 @@
 FROM golang:1.26.6-bookworm
 
 # Install protobuf compiler and dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     protobuf-compiler \
     make \
     curl \
