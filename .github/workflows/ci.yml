@@ -236,7 +236,7 @@ jobs:
       # produces an exit code and no diagnostics.
       - name: Run gosec security scanner
         run: |
-          gosec -exclude-generated \
+          gosec -concurrency 4 -exclude-generated \
             -severity medium \
             -confidence medium \
             -exclude-dir=testdata \
