@@ -7,8 +7,13 @@
 # (FIPS/OpenSSL builds, glibc-only deps); this image has neither.
 FROM golang:1.26.7-alpine
 
-# Build and codegen dependencies (apk, no recommends concept, tiny footprint)
-RUN apk add --no-cache protobuf protobuf-dev make curl git build-base
+# Build and codegen dependencies (apk, no recommends concept, tiny footprint).
+# `apk upgrade` first: a pinned base tag's baked-in package set goes stale
+# between upstream rebuilds, and `docker build --pull` does not refresh it —
+# the Trivy Image gate then fails on advisories that already have a fix
+# (issue #16: openssl CVE-2026-14456, libcrypto3/libssl3 3.5.7-r0 -> 3.5.8-r0).
+RUN apk upgrade --no-cache && \
+    apk add --no-cache protobuf protobuf-dev make curl git build-base
 
 # Install Go protobuf plugin
 RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
