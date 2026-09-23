@@ -1,5 +1,3 @@
-//go:build codec_json
-
 package json
 
 import (

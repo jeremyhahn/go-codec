@@ -8,6 +8,9 @@ JSON (JavaScript Object Notation) is a lightweight text-based data format.
 import "github.com/jeremyhahn/go-codec/pkg/json"
 ```
 
+Importing the package registers the codec in `init()`; no build tags are
+needed. Import only the codec packages you use: Go links just those.
+
 ## Usage
 
 ```go

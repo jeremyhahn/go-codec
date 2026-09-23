@@ -1,5 +1,3 @@
-//go:build codec_json && codec_yaml && codec_toml && codec_msgpack && codec_bson && codec_cbor && codec_protobuf
-
 package factory
 
 import (
@@ -223,13 +221,14 @@ func TestNew_EncodeDecodeStream(t *testing.T) {
 }
 
 func TestSupportedCodecs(t *testing.T) {
-	// Get supported codecs - since we're building with all codec tags,
-	// all 8 codecs should be supported
+	// Importing pkg/factory imports every codec package, so all seven codecs
+	// must be registered in an untagged build.
 	supported := codec.SupportedCodecs()
 
-	// Verify we have at least one codec
-	if len(supported) == 0 {
-		t.Error("Expected at least one supported codec")
+	for _, want := range []codec.Type{codec.JSON, codec.YAML, codec.TOML, codec.MsgPack, codec.BSON, codec.CBOR, codec.ProtoBuf} {
+		if !codec.IsSupported(want) {
+			t.Errorf("IsSupported(%q) = false; importing pkg/factory must register it", want)
+		}
 	}
 
 	// Log supported codecs for debugging

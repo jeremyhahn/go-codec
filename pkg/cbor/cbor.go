@@ -1,5 +1,3 @@
-//go:build codec_cbor
-
 package cbor
 
 import (

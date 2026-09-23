@@ -37,7 +37,6 @@ env:
   GOSEC_VERSION: 'v2.29.0'
   GOVULNCHECK_VERSION: 'v1.7.0'
   COVERAGE_THRESHOLD: 95
-  BUILD_TAGS: 'codec_json,codec_yaml,codec_toml,codec_msgpack,codec_bson,codec_cbor,codec_protobuf'
 
 jobs:
   # Job 1: Unit Tests with Coverage Enforcement
@@ -99,7 +98,7 @@ jobs:
           echo "mode: set" > coverage.out
           for pkg in pkg/bson pkg/cbor pkg/factory pkg/json pkg/msgpack pkg/pool pkg/protobuf pkg/toml pkg/yaml; do
             echo "Testing $pkg..."
-            go test -tags "${{ env.BUILD_TAGS }}" -v -race -coverprofile=coverage-$(basename $pkg).out ./$pkg
+            go test -v -race -coverprofile=coverage-$(basename $pkg).out ./$pkg
             tail -n +2 coverage-$(basename $pkg).out >> coverage.out
           done
 
@@ -198,7 +197,7 @@ jobs:
           fi
 
       - name: Run go vet
-        run: go vet -tags "${{ env.BUILD_TAGS }}" ./...
+        run: go vet ./...
 
       # Latest action major and latest linter: devops.md §9. No version pin --
       # an undocumented pin is a defect, and there is no reason to hold one here.
@@ -206,7 +205,7 @@ jobs:
         uses: golangci/golangci-lint-action@v9
         with:
           version: latest
-          args: --timeout=5m --build-tags "${{ env.BUILD_TAGS }}"
+          args: --timeout=5m
 
   # Job 3: Security Scanning
   security:
@@ -268,7 +267,6 @@ jobs:
             -severity medium \
             -confidence medium \
             -exclude-dir=testdata \
-            -tags "${{ env.BUILD_TAGS }}" \
             -stdout -verbose text \
             -fmt sarif -out gosec-results.sarif ./...
 
@@ -280,7 +278,7 @@ jobs:
           category: gosec
 
       - name: Run govulncheck
-        run: govulncheck -tags "${{ env.BUILD_TAGS }}" ./...
+        run: govulncheck ./...
 
   # Job 3b: Trivy (dependency CVEs + leaked secrets in the tree)
   trivy:
@@ -402,12 +400,12 @@ jobs:
           make generate-examples
 
       - name: Build all packages
-        run: go build -tags "${{ env.BUILD_TAGS }}" ./...
+        run: go build ./...
 
       - name: Build examples
         run: |
-          go build -tags "${{ env.BUILD_TAGS }}" -o /tmp/codec-example ./examples/main.go
-          go build -tags "${{ env.BUILD_TAGS }}" -o /tmp/codec-protobuf-example ./examples/protobuf/...
+          go build -o /tmp/codec-example ./examples/main.go
+          go build -o /tmp/codec-protobuf-example ./examples/protobuf/...
 
   # Job 5: Race Detector
   race:
@@ -440,7 +438,7 @@ jobs:
           make generate-examples
 
       - name: Run tests with race detector
-        run: go test -tags "${{ env.BUILD_TAGS }}" -race -short ./...
+        run: go test -race -short ./...
 
   # Job 6: Benchmarks
   benchmark:
@@ -476,7 +474,7 @@ jobs:
         run: |
           for pkg in json yaml toml msgpack bson cbor protobuf; do
             echo "=== ${pkg^^} Benchmarks ==="
-            go test -tags "${{ env.BUILD_TAGS }}" -bench=. -benchmem -run=^$ ./pkg/$pkg || true
+            go test -bench=. -benchmem -run=^$ ./pkg/$pkg || true
             echo ""
           done
 

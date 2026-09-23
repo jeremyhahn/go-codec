@@ -27,4 +27,4 @@ go-codec/
 ## Key Design Patterns
 - Go generics for type-safe `Codec[T]` interface
 - Factory pattern for runtime selection
-- Build tags for conditional compilation (each codec gated by `codec_<name>` tag)
+- No build tags: each codec package registers itself in `init()` when imported

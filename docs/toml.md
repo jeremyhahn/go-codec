@@ -8,6 +8,9 @@ TOML (Tom's Obvious, Minimal Language) is a configuration file format.
 import "github.com/jeremyhahn/go-codec/pkg/toml"
 ```
 
+Importing the package registers the codec in `init()`; no build tags are
+needed. Import only the codec packages you use: Go links just those.
+
 ## Usage
 
 ```go

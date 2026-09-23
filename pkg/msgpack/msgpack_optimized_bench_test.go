@@ -1,5 +1,3 @@
-//go:build codec_msgpack
-
 package msgpack
 
 import (

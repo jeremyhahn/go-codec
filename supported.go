@@ -1,5 +1,3 @@
-//go:build !codec_none
-
 package codec
 
 import (
@@ -13,15 +11,18 @@ var (
 	codecMu         sync.RWMutex
 )
 
-// RegisterCodec registers a codec as supported. This is called by codec packages
-// during initialization to indicate they are compiled in.
+// RegisterCodec registers a codec as supported. Each codec package calls it
+// from its init function, so a codec is registered exactly when the program
+// imports its package (the database/sql driver pattern). No build tag is
+// involved.
 func RegisterCodec(t Type) {
 	codecMu.Lock()
 	defer codecMu.Unlock()
 	supportedCodecs[t] = true
 }
 
-// SupportedCodecs returns a sorted list of all codecs that are compiled into the build.
+// SupportedCodecs returns a sorted list of all codecs registered in this
+// program, that is, the codec packages it imports.
 func SupportedCodecs() []Type {
 	codecMu.RLock()
 	defer codecMu.RUnlock()
@@ -39,19 +40,20 @@ func SupportedCodecs() []Type {
 	return result
 }
 
-// IsSupported returns true if the given codec type is compiled into the build.
+// IsSupported returns true if the given codec type is registered, that is,
+// its codec package is imported by this program.
 func IsSupported(t Type) bool {
 	codecMu.RLock()
 	defer codecMu.RUnlock()
 	return supportedCodecs[t]
 }
 
-// ErrCodecNotSupported is returned when attempting to use a codec that
-// was not compiled into the build.
+// ErrCodecNotSupported is returned when attempting to use a codec that is not
+// registered: its package is not imported, or the type is unknown.
 type ErrCodecNotSupported struct {
 	CodecType Type
 }
 
 func (e ErrCodecNotSupported) Error() string {
-	return fmt.Sprintf("codec %q is not supported in this build; rebuild with the appropriate build tag (e.g., -tags codec_%s)", e.CodecType, e.CodecType)
+	return fmt.Sprintf("codec %q is not supported in this build; import its package (e.g., github.com/jeremyhahn/go-codec/pkg/%s) to register it", e.CodecType, e.CodecType)
 }

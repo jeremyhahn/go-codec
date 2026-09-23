@@ -7,8 +7,7 @@ A generic codec library for Go with a unified API across multiple serialization 
 - **Unified API** - Same interface for all formats
 - **Go Generics** - Type-safe encoding/decoding
 - **7 Formats** - JSON, YAML, TOML, MessagePack, BSON, CBOR, Protocol Buffers
-- **Modular Imports** - Only import the codecs you need
-- **Conditional Compilation** - Exclude codecs via build tags
+- **Modular Imports** - Import a codec package to register it; no build tags
 - **100% Test Coverage**
 
 ## Installation
@@ -45,7 +44,8 @@ func main() {
 
 ### Factory (All Codecs)
 
-Use the factory when you need runtime codec selection:
+Use the factory when you need runtime codec selection. Importing
+`pkg/factory` links and registers all seven codecs:
 
 ```go
 import (
@@ -55,7 +55,7 @@ import (
 
 c, err := factory.New[User](codec.JSON)
 if err != nil {
-    log.Fatal(err) // codec not compiled in
+    log.Fatal(err) // unknown codec type
 }
 data, _ := c.Marshal(user)
 ```
@@ -72,17 +72,19 @@ data, _ := c.Marshal(user)
 | CBOR | `pkg/cbor` | `cbor:"name"` |
 | Protocol Buffers | `pkg/protobuf` | (generated) |
 
-## Conditional Compilation
+## Choosing Codecs: the Import Is the Opt-In
 
-Exclude codecs at build time to reduce binary size:
+There are no codec build tags. Each codec lives in its own package and
+registers itself in `init()` when imported, the same pattern as
+`database/sql` drivers and `image/png`. A plain `go build` / `go test ./...`
+works; no `-tags` are needed.
 
-```bash
-# Build without CBOR and Protobuf
-make build WITH_CODEC_CBOR=0 WITH_CODEC_PROTOBUF=0
+Go links only the packages a program imports, so to keep a binary small,
+import just the codec packages you use (for example only `pkg/json`) rather
+than `pkg/factory`, which imports all seven.
 
-# Or with go build
-go build -tags "codec_json,codec_yaml"
-```
+Builds that still pass the old `-tags codec_json,...` flags keep working:
+the tags no longer mean anything and are ignored.
 
 Query available codecs at runtime:
 
@@ -90,7 +92,7 @@ Query available codecs at runtime:
 import "github.com/jeremyhahn/go-codec"
 
 for _, c := range codec.SupportedCodecs() {
-    fmt.Println(c) // prints only compiled-in codecs
+    fmt.Println(c) // prints only the codecs whose packages are imported
 }
 
 if codec.IsSupported(codec.CBOR) {

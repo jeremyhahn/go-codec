@@ -1,5 +1,3 @@
-//go:build !codec_none
-
 package codec
 
 import (
@@ -37,11 +35,15 @@ func TestIsSupported_Unsupported(t *testing.T) {
 	}
 }
 
-func TestCodecsRegisteredWithBuildTags(t *testing.T) {
-	// This test verifies the registration mechanism works.
-	// When compiled with build tags (e.g., -tags codec_cbor,codec_json,codec_msgpack),
-	// those codecs will be registered via their init() functions.
-	// Without build tags, no codecs are registered by default.
+func TestRootPackageRegistersNoBuiltinCodec(t *testing.T) {
+	// Codecs register from their own package's init(), so a program that
+	// imports only the root package (as this test binary does) has none of
+	// the built-in codecs registered.
+	for _, c := range []Type{JSON, YAML, TOML, MsgPack, BSON, CBOR, ProtoBuf} {
+		if IsSupported(c) {
+			t.Errorf("IsSupported(%q) = true, but no codec package is imported", c)
+		}
+	}
 
 	// Get currently registered codecs
 	supported := SupportedCodecs()

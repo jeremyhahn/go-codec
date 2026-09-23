@@ -8,6 +8,9 @@ YAML (YAML Ain't Markup Language) is a human-readable data serialization format.
 import "github.com/jeremyhahn/go-codec/pkg/yaml"
 ```
 
+Importing the package registers the codec in `init()`; no build tags are
+needed. Import only the codec packages you use: Go links just those.
+
 ## Usage
 
 ```go

@@ -8,6 +8,9 @@ BSON (Binary JSON) is the binary format used by MongoDB.
 import "github.com/jeremyhahn/go-codec/pkg/bson"
 ```
 
+Importing the package registers the codec in `init()`; no build tags are
+needed. Import only the codec packages you use: Go links just those.
+
 ## Usage
 
 ```go

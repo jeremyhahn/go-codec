@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed — untagged builds now work: the import is the opt-in (#11)
+
+- **Codec build tags removed** (owner ruling 2026-09-22). Every codec package
+  (`pkg/json`, `pkg/yaml`, `pkg/toml`, `pkg/msgpack`, `pkg/bson`, `pkg/cbor`,
+  `pkg/protobuf`) now always compiles its real implementation and registers
+  itself in `init()` when imported, like `database/sql` drivers. Previously a
+  plain `go build` / `go test` with no `-tags codec_*` compiled every codec as
+  an inert stub, so `SupportedCodecs()` was empty and every constructor
+  returned `ErrCodecNotSupported`.
+- Removed: the `*_stub.go` fallbacks, the `codec_json` … `codec_protobuf` and
+  `codec_none` build constraints, and the Makefile `WITH_CODEC_*` variables.
+  Go links only imported packages, so the tags never saved binary size:
+  import just the codec packages you use, or `pkg/factory` for all seven.
+- `ErrCodecNotSupported` now points at importing the codec package instead of
+  a build tag. `factory.NewProtoBuf` always succeeds, because importing
+  `pkg/factory` registers protobuf.
+- Consumers that still pass `-tags codec_*` keep working; unknown tags are
+  ignored, and the flags can be dropped.
+
 ## [1.4.0] - 2026-08-14
 
 ### Removed — BREAKING: the Avro codec is gone

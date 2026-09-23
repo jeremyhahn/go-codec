@@ -1,3 +1,9 @@
+// Package factory is the "every codec" convenience import: it constructs any
+// codec by its codec.Type. Importing it links and registers all seven codec
+// packages (json, yaml, toml, msgpack, bson, cbor and protobuf), together with
+// their third-party dependencies. A program that needs only some formats
+// should import those codec packages directly (for example
+// github.com/jeremyhahn/go-codec/pkg/json) instead, and links only those.
 package factory
 
 import (
@@ -14,7 +20,7 @@ import (
 )
 
 // New creates a new codec of the specified type.
-// Returns an error if the codec type is not supported or not compiled in.
+// Returns an error if the codec type is not registered.
 //
 // Note: For Protocol Buffers, use NewProtoBuf instead as it requires
 // types that implement proto.Message.
@@ -22,7 +28,7 @@ import (
 // Use codec.IsSupported() to check if a codec is available before calling this.
 // Use codec.SupportedCodecs() to get a list of all available codecs.
 func New[T any](codecType codec.Type) (codec.Codec[T], error) {
-	// Check if the codec is compiled in
+	// Reject types no codec package registered (unknown types).
 	if !codec.IsSupported(codecType) {
 		return nil, codec.ErrCodecNotSupported{CodecType: codecType}
 	}
@@ -49,10 +55,8 @@ func New[T any](codecType codec.Type) (codec.Codec[T], error) {
 
 // NewProtoBuf creates a new Protocol Buffers codec.
 // T must be a protobuf-generated type that implements proto.Message.
-// Returns an error if protobuf codec is not compiled in.
+// Importing this package registers the protobuf codec, so the error is always
+// nil; the error return is kept for API compatibility.
 func NewProtoBuf[T protobufcodec.ProtoMessage]() (codec.Codec[T], error) {
-	if !codec.IsSupported(codec.ProtoBuf) {
-		return nil, codec.ErrCodecNotSupported{CodecType: codec.ProtoBuf}
-	}
 	return protobufcodec.New[T](), nil
 }

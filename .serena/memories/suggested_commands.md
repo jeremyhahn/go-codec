@@ -34,7 +34,7 @@
 - `make ci` - CI in Docker
 
 ## Codec Selection
-- `make build WITH_CODEC_CBOR=0 WITH_CODEC_PROTOBUF=0` - Exclude specific codecs
+- No codec build tags: a program links and registers exactly the codec packages it imports
 
 ## Clean
 - `make clean` - Clean all generated/temp files
