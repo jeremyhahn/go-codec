@@ -15,6 +15,14 @@ on:
   # workflow can be dispatched by hand (ci-template v1.3).
   workflow_dispatch:
 
+# Cancel a superseded run on the same ref: Gitea has no cancel REST route, so a
+# workflow-level concurrency group is the only mechanism. The workflow name leads
+# the key so this group can never cancel another workflow. Gitea 1.27.1 does not
+# evaluate expressions in cancel-in-progress, so it must stay the literal true.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   GO_VERSION: '1.26.7'
   COVERAGE_THRESHOLD: 95
