@@ -7,9 +7,7 @@ package main
 //
 // A digest matches a whole token of letters, digits and inner hyphens, and a
 // "family" digest also matches that stem followed by -<number>. Names too
-// common to match without false positives in ordinary prose or code (the
-// fileserver, the Gitea guest, the secondary compute host) are deliberately
-// absent; lab addresses catch those machines' references instead.
+// common to match as bare words belong in contextHosts instead.
 //
 // To add a machine: go run ./internal/cmd/releasability -hash <name>
 var fleetHosts = map[string]struct{}{
@@ -36,4 +34,18 @@ var fleetHosts = map[string]struct{}{
 	"d6a2cab8dc27f6b8593fa277ae901eb05cd64b908ce55de1db2e102dee9cbb45": {},
 	"520305c59429ec5f88249818b9c27cc745912bb4f8d24f93b2aac15879cf9dab": {},
 	"a56e9976b9e2c84ca3aac30aa64bf7a71b6e848399ee0adb26acf07c4a1c0d60": {},
+}
+
+// contextHosts holds, as HostHash digests, the fleet hostnames that are also
+// ordinary words or product names (the fileserver, the Gitea guest, the
+// secondary compute host). A bare-word match would fail on prose and code that
+// merely mention the word, so these match only where the text uses the name as
+// a host: a URL authority, a UNC path, user@host, an ssh/scp/rsync/ping-style
+// command argument, host:path or host:port, an ssh-config Host line, a
+// host/hostname/server setting, or name.lan/.local. See hostContextPatterns
+// and hostCommand.
+var contextHosts = map[string]struct{}{
+	"b922f9f95f307d029177bb8a0aed0553ba187f4df1ac5c00910f4205f59f2b3b": {},
+	"9bc90d09ed7bec3c56ea98b51ae53808c747f393365e1d11dfea5539a9dacb1e": {},
+	"ca4da804fcf103937810a38ff2f0d02e92e614bb4ecc4d131a9d68d5359fb171": {},
 }

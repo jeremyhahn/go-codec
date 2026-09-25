@@ -104,12 +104,136 @@ func scanLine(line string) []Finding {
 	for _, m := range domainPattern.FindAllString(line, -1) {
 		add(KindInternalDomain, m)
 	}
-	for _, tok := range tokenPattern.FindAllString(strings.ToLower(line), -1) {
+	lower := strings.ToLower(line)
+	for _, tok := range tokenPattern.FindAllString(lower, -1) {
 		if isFleetHost(tok) {
 			add(KindFleetHost, tok)
 		}
 	}
+	for _, h := range contextHostRefs(lower) {
+		add(KindFleetHost, h)
+	}
 	return out
+}
+
+// hostLabel is one DNS label; every hostContextPatterns entry captures the
+// candidate host as its first group.
+const hostLabel = `([a-z0-9](?:[a-z0-9-]*[a-z0-9])?)`
+
+// hostContextPatterns are the places where a lowercased line uses a word as a
+// host name. contextHosts entries match only here.
+var hostContextPatterns = []*regexp.Regexp{
+	// URL authority: smb://name/share, https://user@name:3000.
+	regexp.MustCompile(`[a-z][a-z0-9+.-]*://(?:[^\s/@]+@)?` + hostLabel),
+	// UNC path: \\name\share.
+	regexp.MustCompile(`\\\\` + hostLabel),
+	// user@name, git@name:owner/repo.
+	regexp.MustCompile(`[a-z0-9._%+-]+@` + hostLabel),
+	// name:/path, name:~, name:port.
+	regexp.MustCompile(`(?:^|[^a-z0-9_.@/\\-])` + hostLabel + `:(?:~|/[^/]|[0-9]{2,5}(?:[^0-9]|$))`),
+	// ssh_config Host or HostName line.
+	regexp.MustCompile(`^\s*host(?:name)?\s+` + hostLabel),
+	// host: name, hostname=name, server: "name".
+	regexp.MustCompile(`\b(?:host|hostname|server)\s*[:=]\s*["']?` + hostLabel),
+	// name.lan, name.local, name.localdomain.
+	regexp.MustCompile(`(?:^|[^a-z0-9_.@/\\-])` + hostLabel + `\.(?:lan|local|localdomain)(?:[^a-z0-9_.-]|$)`),
+}
+
+// hostCommand finds a remote-access or lookup command and captures its
+// arguments up to the next shell separator; commandHostArgs checks the first
+// maxCommandArgs of them.
+var hostCommand = regexp.MustCompile(`(?:^|[^a-z0-9_-])(?:ssh|scp|sftp|rsync|ping6?|mosh|telnet|ssh-copy-id|traceroute|nslookup|dig)\s+([^;|&]*)`)
+
+// hostArgument is a command argument naming a host: [user@]name followed by
+// the end of the argument, :path, :port or a local suffix.
+var hostArgument = regexp.MustCompile(`^(?:[^@]*@)?` + hostLabel)
+
+const maxCommandArgs = 6
+
+// localSuffixes are the private DNS suffixes a bare host name may carry and
+// still be a fleet reference; name.com and the like are public names.
+var localSuffixes = []string{"lan", "local", "localdomain", "internal", "home.arpa"}
+
+// contextHostRefs returns every contextHosts name the lowercased line uses as
+// a host, once per position.
+func contextHostRefs(lower string) []string {
+	var out []string
+	seen := map[int]bool{}
+	consider := func(start, end int) {
+		if seen[start] || !hostEnds(lower, end) {
+			return
+		}
+		name := lower[start:end]
+		if _, ok := contextHosts[HostHash(name)]; ok {
+			seen[start] = true
+			out = append(out, name)
+		}
+	}
+	for _, re := range hostContextPatterns {
+		for _, loc := range re.FindAllStringSubmatchIndex(lower, -1) {
+			consider(loc[2], loc[3])
+		}
+	}
+	for _, loc := range hostCommand.FindAllStringSubmatchIndex(lower, -1) {
+		for _, arg := range commandArgs(lower, loc[2], loc[3]) {
+			if lower[arg[0]] == '-' {
+				continue
+			}
+			if m := hostArgument.FindStringSubmatchIndex(lower[arg[0]:arg[1]]); m != nil {
+				consider(arg[0]+m[2], arg[0]+m[3])
+			}
+		}
+	}
+	return out
+}
+
+// commandArgs splits lower[start:end] on whitespace and returns the bounds of
+// at most maxCommandArgs arguments.
+func commandArgs(lower string, start, end int) [][2]int {
+	var args [][2]int
+	for i := start; i < end && len(args) < maxCommandArgs; {
+		for i < end && (lower[i] == ' ' || lower[i] == '\t') {
+			i++
+		}
+		j := i
+		for j < end && lower[j] != ' ' && lower[j] != '\t' {
+			j++
+		}
+		if j > i {
+			args = append(args, [2]int{i, j})
+		}
+		i = j
+	}
+	return args
+}
+
+// hostEnds reports whether the label ending at end is a whole host name: the
+// label is not continued, and a dot after it ends the sentence or starts one of
+// localSuffixes rather than a public domain or a Go selector such as name.FS.
+func hostEnds(lower string, end int) bool {
+	if end == len(lower) {
+		return true
+	}
+	switch c := lower[end]; {
+	case c == '-' || c == '_':
+		return false
+	case c != '.':
+		return true
+	}
+	rest := lower[end+1:]
+	if rest == "" || !isLabelByte(rest[0]) {
+		return true
+	}
+	for _, suf := range localSuffixes {
+		if strings.HasPrefix(rest, suf) && (len(rest) == len(suf) || !isLabelByte(rest[len(suf)])) {
+			return true
+		}
+	}
+	return false
+}
+
+func isLabelByte(c byte) bool {
+	return c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || c == '-' || c == '_'
 }
 
 // ipv4Bounded rejects a dotted quad that is part of a longer dotted number,
@@ -164,13 +288,30 @@ func binary(data []byte) bool {
 // Scan reads every path from fsys and returns the findings. A path that no
 // longer exists is skipped: it is a deletion the index has not recorded yet,
 // and it cannot reach a published tree. Binary files are skipped.
+//
+// A symbolic link is never followed: git publishes a link as its target text,
+// so that text is what is scanned, whether or not the target exists here.
+// fsys must implement fs.ReadLinkFS (os.DirFS does) for links to be seen as
+// links.
 func Scan(fsys fs.FS, paths []string) ([]Finding, error) {
 	var out []Finding
 	for _, p := range paths {
-		data, err := fs.ReadFile(fsys, p)
+		info, err := fs.Lstat(fsys, p)
 		if errors.Is(err, fs.ErrNotExist) {
 			continue
 		}
+		if err != nil {
+			return nil, &ReadError{Path: p, Err: err}
+		}
+		if info.Mode()&fs.ModeSymlink != 0 {
+			target, err := fs.ReadLink(fsys, p)
+			if err != nil {
+				return nil, &ReadError{Path: p, Err: err}
+			}
+			out = append(out, ScanText(p, []byte(target))...)
+			continue
+		}
+		data, err := fs.ReadFile(fsys, p)
 		if err != nil {
 			return nil, &ReadError{Path: p, Err: err}
 		}

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -92,6 +93,102 @@ func TestScanTextClean(t *testing.T) {
 	}
 }
 
+// withContextHost registers a synthetic context-only fleet hostname for the
+// test's duration.
+func withContextHost(t *testing.T, name string) {
+	t.Helper()
+	h := HostHash(name)
+	if _, ok := contextHosts[h]; ok {
+		t.Fatalf("%s is already a context host", name)
+	}
+	contextHosts[h] = struct{}{}
+	t.Cleanup(func() { delete(contextHosts, h) })
+}
+
+func TestScanTextContextHostFindings(t *testing.T) {
+	withContextHost(t, "atlas")
+	for _, line := range []string{
+		"ssh atlas",
+		"then run ssh atlas.",
+		"ssh -p 2222 root@atlas",
+		"ssh -v Atlas uptime",
+		"ssh -i key.pem atlas",
+		"ssh\t\tatlas",
+		"smb://atlas/share",
+		`net use \\atlas\share`,
+		"git clone git@atlas:owner/repo.git",
+		"rsync -av src/ atlas:/data",
+		"scp f atlas:~/",
+		"curl http://atlas:3000/api",
+		"see http://Atlas.lan/x",
+		"reach atlas.local now",
+		"Host atlas",
+		"  HostName atlas",
+		"hostname: atlas",
+		`server = "atlas"`,
+		"ping atlas",
+	} {
+		t.Run(line, func(t *testing.T) {
+			got := ScanText("f", []byte(line))
+			want := []Finding{{Path: "f", Line: 1, Kind: KindFleetHost, Match: "atlas"}}
+			if fmt.Sprint(got) != fmt.Sprint(want) {
+				t.Fatalf("got %+v, want %+v", got, want)
+			}
+		})
+	}
+}
+
+func TestScanTextContextHostClean(t *testing.T) {
+	withContextHost(t, "atlas")
+	for _, line := range []string{
+		"the atlas of maps, Atlas Actions, hosted on Atlas",
+		`import "io/atlas"`,
+		"atlas.FS and atlas.ReadFile(x) and var atlas atlas.FS",
+		"https://atlas.com/x and https://docs.atlas.io and me@atlas.com",
+		"git@atlas.com:owner/repo.git",
+		"ssh-keygen -t ed25519 and ssh atlasx and ssh my-atlas",
+		"atlas: true and atlas := 1",
+		"/srv/atlas:/data and x.atlas:22",
+		"git push atlas main",
+		"host atlas-dev",
+		"ssh othernode and ssh atlas_x",
+		"ping it; atlas rocks",
+		"ssh a b c d e f atlas",
+	} {
+		if got := ScanText("f", []byte(line)); len(got) != 0 {
+			t.Errorf("%q: unexpected findings %+v", line, got)
+		}
+	}
+}
+
+func TestContextHostsExcludeRealNamesFromBareMatch(t *testing.T) {
+	for h := range contextHosts {
+		if _, ok := fleetHosts[h]; ok {
+			t.Errorf("digest %s is in both fleetHosts and contextHosts", h)
+		}
+	}
+}
+
+func TestScanReadsSymlinkTargetsWithoutFollowing(t *testing.T) {
+	fsys := fstest.MapFS{
+		"dangling": {Data: []byte(ownerPath), Mode: fs.ModeSymlink},
+		"existing": {Data: []byte("real.txt"), Mode: fs.ModeSymlink},
+		"real.txt": {Data: []byte("clean\n")},
+		"lab":      {Data: []byte("../" + labIPv4), Mode: fs.ModeSymlink},
+	}
+	got, err := Scan(fsys, []string{"dangling", "existing", "real.txt", "lab"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Finding{
+		{Path: "dangling", Line: 1, Kind: KindOwnerPath, Match: "/" + "home/someone"},
+		{Path: "lab", Line: 1, Kind: KindLabAddress, Match: labIPv4},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("got %+v, want %+v", got, want)
+	}
+}
+
 func TestScanSkipsBinaryAndMissing(t *testing.T) {
 	fsys := fstest.MapFS{
 		"bin":   {Data: []byte("\x00" + labIPv4)},
@@ -123,9 +220,14 @@ func TestFleetHostsAreDigests(t *testing.T) {
 	if len(fleetHosts) == 0 {
 		t.Fatal("fleetHosts is empty")
 	}
-	for h := range fleetHosts {
-		if !hex.MatchString(h) {
-			t.Errorf("fleetHosts entry %q is not a SHA-256 hex digest", h)
+	if len(contextHosts) == 0 {
+		t.Fatal("contextHosts is empty")
+	}
+	for _, set := range []map[string]struct{}{fleetHosts, contextHosts} {
+		for h := range set {
+			if !hex.MatchString(h) {
+				t.Errorf("host entry %q is not a SHA-256 hex digest", h)
+			}
 		}
 	}
 }
@@ -133,6 +235,12 @@ func TestFleetHostsAreDigests(t *testing.T) {
 // gitRepo creates a repository with the given tracked files and one untracked
 // file carrying a lab address, which the gate must ignore.
 func gitRepo(t *testing.T, files map[string]string) string {
+	t.Helper()
+	return gitRepoLinks(t, files, nil)
+}
+
+// gitRepoLinks is gitRepo with tracked symbolic links, name to target.
+func gitRepoLinks(t *testing.T, files, links map[string]string) string {
 	t.Helper()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Fatalf("git is required: %v", err)
@@ -153,6 +261,11 @@ func gitRepo(t *testing.T, files map[string]string) string {
 			t.Fatal(err)
 		}
 		if err := os.WriteFile(p, []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for name, target := range links {
+		if err := os.Symlink(target, filepath.Join(dir, name)); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -189,6 +302,28 @@ func TestRunFailsOnPlantedLabAddress(t *testing.T) {
 	}
 	if !strings.Contains(errOut.String(), "1 finding(s)") {
 		t.Fatalf("stderr %q", errOut.String())
+	}
+}
+
+func TestRunFailsOnSymlinkTargets(t *testing.T) {
+	withHost(t, "labnode")
+	dir := gitRepoLinks(t,
+		map[string]string{"README.md": "# ok\n", "labnode-07/data.txt": "clean\n"},
+		map[string]string{
+			"private": ownerPath,    // dangling: the target does not exist here
+			"current": "labnode-07", // existing directory
+		})
+	var out, errOut bytes.Buffer
+	if code := run([]string{"-C", dir}, &out, &errOut); code != exitFindings {
+		t.Fatalf("exit %d, want %d\nstdout:\n%s\nstderr:\n%s", code, exitFindings, out.String(), errOut.String())
+	}
+	for _, want := range []string{
+		"current:1: fleet hostname: labnode-07\n",
+		"private:1: owner path: /" + "home/someone\n",
+	} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("stdout %q lacks %q", out.String(), want)
+		}
 	}
 }
 
