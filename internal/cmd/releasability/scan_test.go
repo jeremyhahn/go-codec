@@ -57,6 +57,10 @@ func TestScanTextFindings(t *testing.T) {
 		{"at " + macPath, KindOwnerPath, "/" + "Users/someone"},
 		{"mail " + internalDN, KindInternalDomain, "example" + ".internal"},
 		{"smb://" + arpaDN + "/share", KindInternalDomain, arpaDN},
+		{"https://build" + ".INTERNAL/x", KindInternalDomain, "build" + ".INTERNAL"},
+		{"smb://nas.HOME" + ".ARPA/share", KindInternalDomain, "nas.HOME" + ".ARPA"},
+		{"mail Agent@Example" + ".Internal", KindInternalDomain, "Example" + ".Internal"},
+		{"nas.Home" + ".Arpa", KindInternalDomain, "nas.Home" + ".Arpa"},
 		{"ssh TestBox", KindFleetHost, "testbox"},
 		{"/mnt/labnode-07/data", KindFleetHost, "labnode-07"},
 	}
@@ -84,6 +88,7 @@ func TestScanTextClean(t *testing.T) {
 		"placeholder /home/<user>/sources and /home/ alone",
 		"module github.com/jeremyhahn/go-codec/internal/releasetest",
 		"time.Local and x.internalize",
+		"time.Local and x.Internalize and HOME.ARPANET",
 		"testboxes and testbox2 and mytestbox",
 		"testbox-dev",
 	} {

@@ -60,7 +60,7 @@ var (
 	// must start with its fc or fd prefix before netip is asked to parse it.
 	ipv6Pattern     = regexp.MustCompile(`(?i)\bf[cd][0-9a-f]{0,2}:[0-9a-f:.]*`)
 	ownerPathRegexp = regexp.MustCompile(`/(?:home|Users)/[A-Za-z0-9_][A-Za-z0-9._-]*`)
-	domainPattern   = regexp.MustCompile(`\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:internal|home\.arpa)\b`)
+	domainPattern   = regexp.MustCompile(`(?i)\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.(?:internal|home\.arpa)\b`)
 	tokenPattern    = regexp.MustCompile(`[a-z0-9]+(?:-[a-z0-9]+)*`)
 	familyPattern   = regexp.MustCompile(`^(.+)-[0-9]+$`)
 	// cgnat is RFC 6598 shared address space, the range overlay VPNs hand to
