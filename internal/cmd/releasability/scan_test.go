@@ -132,6 +132,15 @@ func TestScanTextContextHostFindings(t *testing.T) {
 		"hostname: atlas",
 		`server = "atlas"`,
 		"ping atlas",
+		"ssh -o BatchMode=yes -o ConnectTimeout=5 -i key atlas",
+		"ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=no -p 2222 -i key -l root -v atlas uptime",
+		"ssh -vp 2222 atlas",
+		"ssh -p2222 -- atlas",
+		`ssh -i "key file" "atlas"`,
+		"scp -P 2222 -o BatchMode=yes -i key -r a b c atlas:",
+		"rsync -a -e ssh --delete --exclude x a b atlas::module",
+		"ssh-copy-id -i key.pub -p 22 atlas",
+		"ping -c 3 -W 1 -i 0.2 atlas",
 	} {
 		t.Run(line, func(t *testing.T) {
 			got := ScanText("f", []byte(line))
@@ -159,6 +168,9 @@ func TestScanTextContextHostClean(t *testing.T) {
 		"ssh othernode and ssh atlas_x",
 		"ping it; atlas rocks",
 		"ssh a b c d e f atlas",
+		"ssh -o BatchMode=yes -i key node1 ls atlas",
+		"use ssh to reach atlas",
+		"scp -P 2222 atlas local/atlas",
 	} {
 		if got := ScanText("f", []byte(line)); len(got) != 0 {
 			t.Errorf("%q: unexpected findings %+v", line, got)
@@ -194,17 +206,36 @@ func TestScanReadsSymlinkTargetsWithoutFollowing(t *testing.T) {
 	}
 }
 
-func TestScanSkipsBinaryAndMissing(t *testing.T) {
-	fsys := fstest.MapFS{
-		"bin":   {Data: []byte("\x00" + labIPv4)},
-		"a.txt": {Data: []byte("x " + labIPv4)},
+func TestScanReadsBinaryText(t *testing.T) {
+	withContextHost(t, "atlas")
+	utf16 := func(s string) string {
+		var b strings.Builder
+		for _, c := range []byte(s) {
+			b.WriteByte(c)
+			b.WriteByte(0)
+		}
+		return b.String()
 	}
-	got, err := Scan(fsys, []string{"bin", "gone.txt", "a.txt"})
+	fsys := fstest.MapFS{
+		"bin":    {Data: []byte("\x00\x01" + labIPv4 + "\xff\x00")},
+		"path":   {Data: []byte("\x00\x02\n\x03" + ownerPath + "\x00")},
+		"wide":   {Data: []byte("\xff\xfe" + utf16("ssh atlas"))},
+		"joined": {Data: []byte("\x00ssh\x01atlas\x00")},
+		"clean":  {Data: []byte("\x00\x01clean bytes\xff")},
+		"a.txt":  {Data: []byte("x " + labIPv4)},
+	}
+	got, err := Scan(fsys, []string{"bin", "path", "wide", "joined", "clean", "gone.txt", "a.txt"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got) != 1 || got[0].Path != "a.txt" {
-		t.Fatalf("got %+v, want exactly the a.txt finding", got)
+	want := []Finding{
+		{Path: "bin", Line: 1, Kind: KindLabAddress, Match: labIPv4},
+		{Path: "path", Line: 2, Kind: KindOwnerPath, Match: "/" + "home/someone"},
+		{Path: "wide", Line: 1, Kind: KindFleetHost, Match: "atlas"},
+		{Path: "a.txt", Line: 1, Kind: KindLabAddress, Match: labIPv4},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("got %+v, want %+v", got, want)
 	}
 }
 

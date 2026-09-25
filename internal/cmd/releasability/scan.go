@@ -140,15 +140,41 @@ var hostContextPatterns = []*regexp.Regexp{
 }
 
 // hostCommand finds a remote-access or lookup command and captures its
-// arguments up to the next shell separator; commandHostArgs checks the first
-// maxCommandArgs of them.
-var hostCommand = regexp.MustCompile(`(?:^|[^a-z0-9_-])(?:ssh|scp|sftp|rsync|ping6?|mosh|telnet|ssh-copy-id|traceroute|nslookup|dig)\s+([^;|&]*)`)
+// arguments up to the next shell separator; commandHostRefs parses them.
+var hostCommand = regexp.MustCompile(`(?:^|[^a-z0-9_-])(ssh|scp|sftp|rsync|ping6?|mosh|telnet|ssh-copy-id|traceroute|nslookup|dig)\s+([^;|&]*)`)
 
 // hostArgument is a command argument naming a host: [user@]name followed by
 // the end of the argument, :path, :port or a local suffix.
 var hostArgument = regexp.MustCompile(`^(?:[^@]*@)?` + hostLabel)
 
-const maxCommandArgs = 6
+// commandSpec describes how a command takes its host.
+type commandSpec struct {
+	// valueFlags are the single-letter options that consume a value, either
+	// attached (-p2222) or as the next argument (-p 2222).
+	valueFlags string
+	// copyOperands marks scp and rsync: every operand of the form
+	// [user@]host:path names a host, and a bare operand is a local path.
+	copyOperands bool
+}
+
+// hostCommands maps each command hostCommand recognizes to its option syntax,
+// taken from the OpenSSH, rsync, iputils and bind manual pages. For the other
+// commands the first operand is the host and later operands are a remote
+// command or query arguments.
+var hostCommands = map[string]commandSpec{
+	"ssh":         {valueFlags: "BbcDEeFIiJLlmOopQRSWw"},
+	"scp":         {valueFlags: "cDFiJlloPSX", copyOperands: true},
+	"sftp":        {valueFlags: "BbcDFiJlloPRSs"},
+	"rsync":       {valueFlags: "eBfMT", copyOperands: true},
+	"ssh-copy-id": {valueFlags: "Fiop"},
+	"mosh":        {valueFlags: "p"},
+	"telnet":      {valueFlags: "blenSX"},
+	"ping":        {valueFlags: "AcFIilMmNpQSstTWw"},
+	"ping6":       {valueFlags: "AcFIilMmNpQSstTWw"},
+	"traceroute":  {valueFlags: "AfgimNpstqwxz"},
+	"nslookup":    {},
+	"dig":         {valueFlags: "bcfkpqtxy"},
+}
 
 // localSuffixes are the private DNS suffixes a bare host name may carry and
 // still be a fleet reference; name.com and the like are public names.
@@ -175,10 +201,8 @@ func contextHostRefs(lower string) []string {
 		}
 	}
 	for _, loc := range hostCommand.FindAllStringSubmatchIndex(lower, -1) {
-		for _, arg := range commandArgs(lower, loc[2], loc[3]) {
-			if lower[arg[0]] == '-' {
-				continue
-			}
+		spec := hostCommands[lower[loc[2]:loc[3]]]
+		for _, arg := range commandHostArgs(spec, commandArgs(lower, loc[4], loc[5])) {
 			if m := hostArgument.FindStringSubmatchIndex(lower[arg[0]:arg[1]]); m != nil {
 				consider(arg[0]+m[2], arg[0]+m[3])
 			}
@@ -187,20 +211,77 @@ func contextHostRefs(lower string) []string {
 	return out
 }
 
-// commandArgs splits lower[start:end] on whitespace and returns the bounds of
-// at most maxCommandArgs arguments.
-func commandArgs(lower string, start, end int) [][2]int {
-	var args [][2]int
-	for i := start; i < end && len(args) < maxCommandArgs; {
+// commandHostArgs walks a command's arguments past its options, however many
+// there are, and returns the operands that name a host: the destination for
+// ssh-style commands, every host:path operand for scp and rsync.
+func commandHostArgs(spec commandSpec, args []commandArg) [][2]int {
+	var hosts [][2]int
+	options := true
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		if options && a.text == "--" {
+			options = false
+			continue
+		}
+		if options && len(a.text) > 1 && a.text[0] == '-' {
+			if a.text[1] != '-' && optionTakesNext(spec.valueFlags, a.text[1:]) {
+				i++
+			}
+			continue
+		}
+		if !spec.copyOperands {
+			return append(hosts, a.span)
+		}
+		if c := strings.IndexByte(a.text, ':'); c > 0 && !strings.Contains(a.text[:c], "/") {
+			hosts = append(hosts, a.span)
+		}
+	}
+	return hosts
+}
+
+// optionTakesNext reports whether a cluster of single-letter options, such as
+// "vp" from -vp, ends in one that consumes the next argument as its value.
+func optionTakesNext(valueFlags, cluster string) bool {
+	for i := 0; i < len(cluster); i++ {
+		if strings.IndexByte(valueFlags, cluster[i]) >= 0 {
+			return i == len(cluster)-1
+		}
+	}
+	return false
+}
+
+// commandArg is one whitespace-separated argument with surrounding quotes
+// removed; span is its unquoted position in the line.
+type commandArg struct {
+	text string
+	span [2]int
+}
+
+// commandArgs splits lower[start:end] on whitespace outside quotes, with no
+// limit on the number of arguments.
+func commandArgs(lower string, start, end int) []commandArg {
+	var args []commandArg
+	for i := start; i < end; {
 		for i < end && (lower[i] == ' ' || lower[i] == '\t') {
 			i++
 		}
 		j := i
-		for j < end && lower[j] != ' ' && lower[j] != '\t' {
+		var quote byte
+		for j < end && (quote != 0 || lower[j] != ' ' && lower[j] != '\t') {
+			switch c := lower[j]; {
+			case c == quote:
+				quote = 0
+			case quote == 0 && (c == '"' || c == '\''):
+				quote = c
+			}
 			j++
 		}
-		if j > i {
-			args = append(args, [2]int{i, j})
+		s, e := i, j
+		for e-s >= 2 && (lower[s] == '"' || lower[s] == '\'') && lower[e-1] == lower[s] {
+			s, e = s+1, e-1
+		}
+		if e > s {
+			args = append(args, commandArg{text: lower[s:e], span: [2]int{s, e}})
 		}
 		i = j
 	}
@@ -287,7 +368,8 @@ func binary(data []byte) bool {
 
 // Scan reads every path from fsys and returns the findings. A path that no
 // longer exists is skipped: it is a deletion the index has not recorded yet,
-// and it cannot reach a published tree. Binary files are skipped.
+// and it cannot reach a published tree. A binary file is not skipped: the
+// text embedded in it is scanned, see scanBinary.
 //
 // A symbolic link is never followed: git publishes a link as its target text,
 // so that text is what is scanned, whether or not the target exists here.
@@ -316,9 +398,46 @@ func Scan(fsys fs.FS, paths []string) ([]Finding, error) {
 			return nil, &ReadError{Path: p, Err: err}
 		}
 		if binary(data) {
+			out = append(out, scanBinary(p, data)...)
 			continue
 		}
 		out = append(out, ScanText(p, data)...)
 	}
 	return out, nil
+}
+
+// scanBinary scans the text embedded in a binary file. Every byte outside
+// printable ASCII, tab and newline becomes a separator, so each embedded
+// string is scanned on its own and line numbers still count newline bytes.
+// The data is scanned a second time with NUL bytes dropped, which turns
+// UTF-16 text back into ASCII. A match found by both passes is reported once.
+func scanBinary(path string, data []byte) []Finding {
+	seen := map[Finding]bool{}
+	var out []Finding
+	for _, view := range [][]byte{printable(data), printable(bytes.ReplaceAll(data, []byte{0}, nil))} {
+		for _, f := range ScanText(path, view) {
+			if !seen[f] {
+				seen[f] = true
+				out = append(out, f)
+			}
+		}
+	}
+	return out
+}
+
+// binarySeparator replaces non-text bytes in a binary file; it is neither
+// whitespace nor a host-name byte, so it ends a match without joining two
+// embedded strings into one command line.
+const binarySeparator = 0x1f
+
+func printable(data []byte) []byte {
+	out := make([]byte, len(data))
+	for i, c := range data {
+		if c == '\n' || c == '\t' || c >= 0x20 && c < 0x7f {
+			out[i] = c
+		} else {
+			out[i] = binarySeparator
+		}
+	}
+	return out
 }
