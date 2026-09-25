@@ -399,9 +399,11 @@ install-tools:
 	@echo "  Ubuntu/Debian: sudo apt-get install protobuf-compiler"
 	@echo "  macOS: brew install protobuf"
 
-# CI target - runs all checks in Docker (mirrors GitHub Actions)
+# CI target - runs all checks in Docker (mirrors GitHub Actions). The
+# releasability gate runs first, on the host: it reads git's list of tracked
+# files, and the image carries no .git (.dockerignore drops it).
 .PHONY: ci
-ci:
+ci: releasability
 	@echo "Building Docker image..."
 	@docker build -t go-codec .
 	@echo ""
@@ -414,6 +416,14 @@ ci-local: check-tools generate generate-examples fmt-check vet lint security tes
 	@echo "========================================="
 	@echo "All CI checks passed!"
 	@echo "========================================="
+
+# Public-releasability gate (go-codec#26): fails on a lab address, a fleet
+# hostname, an owner path or an internal domain name in any tracked file. The
+# GitHub tree is byte-identical to the Gitea tag (version-control.md §5a), so
+# this is checked in the source, before tagging. Needs a git work tree.
+.PHONY: releasability
+releasability:
+	@go run ./internal/cmd/releasability
 
 # Format check (fails if code is not formatted)
 .PHONY: fmt-check
@@ -518,6 +528,7 @@ help:
 	@echo "  make vet                     - Run go vet"
 	@echo "  make lint                    - Run golangci-lint"
 	@echo "  make security                - Run security scans"
+	@echo "  make releasability           - Fail on lab addresses, fleet hostnames or owner paths in tracked files"
 	@echo ""
 	@echo "Build:"
 	@echo "  make build                   - Build all packages"
@@ -573,8 +584,10 @@ RELEASE_REMOTE ?= origin
 # ---- release-alpha-changelog: the changelog assembly release-versioning.md §5
 # requires as "a committed step performed before tagging". PRs add
 # changelog.d/<issue>-<slug>.md; this folds [Unreleased] and every fragment into
-# a "## [X.Y.Z-alpha] - <date>" section (scripts/assemble-changelog.sh), deletes
-# the fragments and commits both through agent-git.sh. The template recipe then
+# a "## [X.Y.Z-alpha] - <date>" section (internal/cmd/assemble-changelog, built
+# to a temporary directory OUTSIDE the tree, because `go run` reports every
+# non-zero exit as 1 and this recipe needs the tool's exit 3), deletes the
+# fragments and commits both through agent-git.sh. The template recipe then
 # re-runs its guards, finds the heading, commits VERSION, tags, and pushes HEAD —
 # which carries this commit too — in one atomic push.
 #
@@ -605,8 +618,9 @@ release-alpha-changelog:
 	  *) echo "ERROR: could not reach $$REL_REMOTE to check whether tag $$REL_VERSION exists. Refusing to continue: an unreachable remote is not an absent tag"; exit 1 ;; \
 	esac
 	@test -z "$$(git status --porcelain)" || { echo 'ERROR: working tree not clean'; exit 1; }
-	@set -e; rc=0; \
-	scripts/assemble-changelog.sh CHANGELOG.md "$${REL_VERSION#v}" "$$(date -u +%Y-%m-%d)" changelog.d > CHANGELOG.md.assembled || rc=$$?; \
+	@set -e; rc=0; tool=$$(mktemp -d); trap 'rm -rf "$$tool"' EXIT; \
+	go build -o "$$tool/assemble-changelog" ./internal/cmd/assemble-changelog || { echo "ERROR: could not build the changelog assembler; nothing was committed"; exit 1; }; \
+	"$$tool/assemble-changelog" CHANGELOG.md "$${REL_VERSION#v}" "$$(date -u +%Y-%m-%d)" changelog.d > CHANGELOG.md.assembled || rc=$$?; \
 	case "$$rc" in \
 	  0) : ;; \
 	  3) rm -f CHANGELOG.md.assembled; echo "changelog: nothing pending to assemble for $$REL_VERSION"; exit 0 ;; \

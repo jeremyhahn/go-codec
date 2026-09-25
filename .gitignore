@@ -29,3 +29,10 @@ examples/protobuf/protobuf
 Thumbs.db
 ci.log
 go.work.sum
+
+# Agent context: local to each clone, never in the published tree. The GitHub
+# tree is byte-identical to the Gitea tag (version-control.md §5a), and these
+# carry lab references (owner ruling on go-codec#26).
+/.claude/
+/.serena/
+/CLAUDE.md

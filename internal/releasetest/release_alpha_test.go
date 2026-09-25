@@ -69,6 +69,25 @@ func copyFile(t *testing.T, src, dst string, mode os.FileMode) {
 	}
 }
 
+// copyAssembler gives the fixture what the recipe's `go build
+// ./internal/cmd/assemble-changelog` needs: the tool's non-test sources and a
+// go.mod naming this module. The tool imports only the standard library.
+func copyAssembler(t *testing.T, src, work string) {
+	t.Helper()
+	const rel = "internal/cmd/assemble-changelog"
+	names, err := filepath.Glob(filepath.Join(src, rel, "*.go"))
+	if err != nil || len(names) == 0 {
+		t.Fatalf("no sources under %s: %v", rel, err)
+	}
+	for _, name := range names {
+		if strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		copyFile(t, name, filepath.Join(work, rel, filepath.Base(name)), 0o600)
+	}
+	writeFile(t, filepath.Join(work, "go.mod"), "module github.com/jeremyhahn/go-codec\n\ngo 1.27.0\n", 0o600)
+}
+
 func writeFile(t *testing.T, path, content string, mode os.FileMode) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
@@ -84,7 +103,7 @@ func writeFile(t *testing.T, path, content string, mode os.FileMode) {
 // is level with HEAD before the recipe runs.
 func newFixture(t *testing.T, changelog string, fragments map[string]string) *fixture {
 	t.Helper()
-	for _, tool := range []string{"git", "make"} {
+	for _, tool := range []string{"git", "make", "go"} {
 		if _, err := exec.LookPath(tool); err != nil {
 			t.Fatalf("%s is required to test the release recipe: %v", tool, err)
 		}
@@ -105,13 +124,23 @@ func newFixture(t *testing.T, changelog string, fragments map[string]string) *fi
 	var env []string
 	for _, kv := range os.Environ() {
 		switch strings.SplitN(kv, "=", 2)[0] {
-		case "HOME", "GIT_CONFIG_GLOBAL", "GIT_CONFIG_NOSYSTEM", "PATH", "AGENT_GIT", "VERSION",
+		case "GOCACHE", "GOMODCACHE", "GOTOOLCHAIN", "HOME", "GIT_CONFIG_GLOBAL", "GIT_CONFIG_NOSYSTEM", "PATH", "AGENT_GIT", "VERSION",
 			"REPO_NAME", "RELEASE_REMOTE", "MAKEFLAGS", "MFLAGS", "MAKELEVEL", "STUB_FAIL", "STUB_LOG":
 			continue
 		}
 		env = append(env, kv)
 	}
+	// The recipe builds internal/cmd/assemble-changelog; keep the caller's Go
+	// caches so the private HOME does not force a cold standard-library build.
+	for _, name := range []string{"GOCACHE", "GOMODCACHE"} {
+		out, err := exec.Command("go", "env", name).Output() // #nosec G204 -- fixed arguments
+		if err != nil {
+			t.Fatalf("go env %s: %v", name, err)
+		}
+		env = append(env, name+"="+strings.TrimSpace(string(out)))
+	}
 	f.env = append(env,
+		"GOTOOLCHAIN=local",
 		"HOME="+home,
 		"GIT_CONFIG_GLOBAL="+filepath.Join(home, "gitconfig"),
 		"GIT_CONFIG_NOSYSTEM=1",
@@ -135,7 +164,7 @@ func newFixture(t *testing.T, changelog string, fragments map[string]string) *fi
 
 	src := repoRoot(t)
 	copyFile(t, filepath.Join(src, "Makefile"), filepath.Join(f.work, "Makefile"), 0o600)
-	copyFile(t, filepath.Join(src, "scripts", "assemble-changelog.sh"), filepath.Join(f.work, "scripts", "assemble-changelog.sh"), 0o700)
+	copyAssembler(t, src, f.work)
 	writeFile(t, filepath.Join(f.work, "VERSION"), "0.0.1-alpha\n", 0o600)
 	writeFile(t, filepath.Join(f.work, "CHANGELOG.md"), changelog, 0o600)
 	writeFile(t, filepath.Join(f.work, "changelog.d", ".gitkeep"), "", 0o600)
