@@ -5,7 +5,7 @@
 # kept tripping the Trivy Image gate (CVE-2026-34191, libaprutil1) for
 # packages this library never uses. Debian bases require a documented reason
 # (FIPS/OpenSSL builds, glibc-only deps); this image has neither.
-FROM golang:1.26.7-alpine
+FROM golang:1.27.0-alpine
 
 # Build and codegen dependencies (apk, no recommends concept, tiny footprint).
 # `apk upgrade` first: a pinned base tag's baked-in package set goes stale

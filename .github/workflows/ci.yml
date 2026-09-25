@@ -32,7 +32,7 @@ concurrency:
 # same versions as the image; keep the pins below in step with the image. To
 # bump a version, ask agent-company to rebuild the image first (issue #12).
 env:
-  GO_VERSION: '1.26.7'
+  GO_VERSION: '1.27.0'
   PROTOC_GEN_GO_VERSION: 'v1.36.6'
   GOSEC_VERSION: 'v2.29.0'
   GOVULNCHECK_VERSION: 'v1.7.0'
