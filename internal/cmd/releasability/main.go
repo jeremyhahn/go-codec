@@ -1,6 +1,8 @@
 // Command releasability is the public-releasability gate: it fails when a
 // tracked file carries a lab address, a fleet hostname, an owner path or an
-// internal domain name.
+// internal domain name, when a shell script or agent context is tracked, and
+// when a tracked binary or oversize file is not listed in
+// releasability-exempt.txt (see Scan).
 //
 // Usage:
 //
@@ -82,6 +84,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return exitError
 	}
 	for _, f := range findings {
+		if f.Line == 0 { // a finding about the whole file
+			_, _ = fmt.Fprintf(stdout, "%s: %s: %s\n", f.Path, f.Kind, f.Match)
+			continue
+		}
 		_, _ = fmt.Fprintf(stdout, "%s:%d: %s: %s\n", f.Path, f.Line, f.Kind, f.Match)
 	}
 	if len(findings) > 0 {

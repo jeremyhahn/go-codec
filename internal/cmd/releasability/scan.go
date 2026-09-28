@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io/fs"
 	"net/netip"
 	"regexp"
@@ -24,9 +25,16 @@ const (
 	KindOwnerPath Kind = "owner path"
 	// KindInternalDomain is a name under a private-use DNS suffix.
 	KindInternalDomain Kind = "internal domain"
+	// KindUnreadable is a tracked file the gate cannot read as text, a binary
+	// file or one over MaxFileSize, that ExemptFile does not list.
+	KindUnreadable Kind = "unreadable file"
+	// KindForbiddenFile is a file that never ships: a shell script or agent
+	// context.
+	KindForbiddenFile Kind = "forbidden file"
 )
 
-// Finding is one match in one tracked file.
+// Finding is one match in one tracked file. Line is 0 for a finding about
+// the whole file: KindUnreadable and KindForbiddenFile.
 type Finding struct {
 	Path  string
 	Line  int
@@ -133,8 +141,8 @@ var hostContextPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?:^|[^a-z0-9_.@/\\-])` + hostLabel + `:(?:~|/[^/]|[0-9]{2,5}(?:[^0-9]|$))`),
 	// ssh_config Host or HostName line.
 	regexp.MustCompile(`^\s*host(?:name)?\s+` + hostLabel),
-	// host: name, hostname=name, server: "name".
-	regexp.MustCompile(`\b(?:host|hostname|server)\s*[:=]\s*["']?` + hostLabel),
+	// host: name, hostname=name, server: "name", "hostname": "name".
+	regexp.MustCompile(`\b(?:host|hostname|server)["']?\s*[:=]\s*["']?` + hostLabel),
 	// name.lan, name.local, name.localdomain.
 	regexp.MustCompile(`(?:^|[^a-z0-9_.@/\\-])` + hostLabel + `\.(?:lan|local|localdomain)(?:[^a-z0-9_.-]|$)`),
 }
@@ -366,18 +374,53 @@ func binary(data []byte) bool {
 	return bytes.IndexByte(head, 0) >= 0
 }
 
+// ExemptFile is the committed list of tracked files the gate cannot read as
+// text but that may still ship: binary files and files over MaxFileSize. Each
+// entry is one line, the path followed by a reason; blank lines and lines
+// starting with # are comments. The list is honored only when it is itself
+// tracked, so a local edit cannot quietly widen it.
+const ExemptFile = "releasability-exempt.txt"
+
+// MaxFileSize is the size cap. A tracked file larger than this is a finding
+// unless ExemptFile lists it.
+const MaxFileSize = 1 << 20
+
+// ExemptError is a malformed or stale ExemptFile entry.
+type ExemptError struct {
+	Line   int
+	Reason string
+}
+
+func (e *ExemptError) Error() string {
+	return fmt.Sprintf("releasability: %s:%d: %s", ExemptFile, e.Line, e.Reason)
+}
+
 // Scan reads every path from fsys and returns the findings. A path that no
 // longer exists is skipped: it is a deletion the index has not recorded yet,
-// and it cannot reach a published tree. A binary file is not skipped: the
-// text embedded in it is scanned, see scanBinary.
+// and it cannot reach a published tree.
+//
+// The gate fails closed on what it cannot read as text: a binary file (see
+// binary) or a file over MaxFileSize is a finding unless ExemptFile lists it.
+// The text embedded in an exempt binary file is still scanned, see
+// scanBinary, and an exempt oversize file is still scanned in full.
+//
+// A shell script, by extension or by shebang, and agent context (.claude/,
+// .serena/, CLAUDE.md) are findings wherever they are tracked.
 //
 // A symbolic link is never followed: git publishes a link as its target text,
 // so that text is what is scanned, whether or not the target exists here.
 // fsys must implement fs.ReadLinkFS (os.DirFS does) for links to be seen as
 // links.
 func Scan(fsys fs.FS, paths []string) ([]Finding, error) {
+	exempt, err := readExempt(fsys, paths)
+	if err != nil {
+		return nil, err
+	}
 	var out []Finding
 	for _, p := range paths {
+		if isAgentFile(p) {
+			out = append(out, Finding{Path: p, Kind: KindForbiddenFile, Match: "agent context"})
+		}
 		info, err := fs.Lstat(fsys, p)
 		if errors.Is(err, fs.ErrNotExist) {
 			continue
@@ -393,17 +436,99 @@ func Scan(fsys fs.FS, paths []string) ([]Finding, error) {
 			out = append(out, ScanText(p, []byte(target))...)
 			continue
 		}
+		if info.Size() > MaxFileSize && !exempt[p] {
+			out = append(out, Finding{Path: p, Kind: KindUnreadable, Match: fmt.Sprintf("over %d bytes", MaxFileSize)})
+			continue
+		}
 		data, err := fs.ReadFile(fsys, p)
 		if err != nil {
 			return nil, &ReadError{Path: p, Err: err}
 		}
+		if isShellScript(p, data) {
+			out = append(out, Finding{Path: p, Kind: KindForbiddenFile, Match: "shell script"})
+		}
 		if binary(data) {
+			if !exempt[p] {
+				out = append(out, Finding{Path: p, Kind: KindUnreadable, Match: "binary file"})
+				continue
+			}
 			out = append(out, scanBinary(p, data)...)
 			continue
 		}
 		out = append(out, ScanText(p, data)...)
 	}
 	return out, nil
+}
+
+// readExempt parses ExemptFile when it is tracked. An entry without a reason,
+// or naming a path that is not tracked, is an *ExemptError: a stale exemption
+// would otherwise wait silently for a file of that name to reappear.
+func readExempt(fsys fs.FS, paths []string) (map[string]bool, error) {
+	tracked := make(map[string]bool, len(paths))
+	for _, p := range paths {
+		tracked[p] = true
+	}
+	exempt := map[string]bool{}
+	if !tracked[ExemptFile] {
+		return exempt, nil
+	}
+	data, err := fs.ReadFile(fsys, ExemptFile)
+	if errors.Is(err, fs.ErrNotExist) {
+		return exempt, nil
+	}
+	if err != nil {
+		return nil, &ReadError{Path: ExemptFile, Err: err}
+	}
+	for i, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		path, reason, _ := strings.Cut(line, " ")
+		if tab, r, ok := strings.Cut(path, "\t"); ok {
+			path, reason = tab, r+" "+reason
+		}
+		if strings.TrimSpace(reason) == "" {
+			return nil, &ExemptError{Line: i + 1, Reason: path + " has no reason"}
+		}
+		if !tracked[path] {
+			return nil, &ExemptError{Line: i + 1, Reason: path + " is not a tracked file"}
+		}
+		exempt[path] = true
+	}
+	return exempt, nil
+}
+
+// isAgentFile reports whether a tracked path is agent context, which never
+// ships: anything under a .claude or .serena directory, or a CLAUDE.md.
+func isAgentFile(p string) bool {
+	parts := strings.Split(p, "/")
+	for _, d := range parts[:len(parts)-1] {
+		if d == ".claude" || d == ".serena" {
+			return true
+		}
+	}
+	return parts[len(parts)-1] == "CLAUDE.md"
+}
+
+// shellExtensions are the file extensions of shell scripts.
+var shellExtensions = []string{".sh", ".bash", ".zsh", ".ksh", ".csh", ".tcsh", ".fish"}
+
+// shellShebang matches a shebang line that runs a shell, directly or through
+// env: #!/bin/sh, #!/usr/bin/env bash, #!/usr/bin/env -S zsh -e.
+var shellShebang = regexp.MustCompile(`^#!\s*\S*/(?:env\s+(?:-\S+\s+)*)?(?:sh|bash|dash|ash|zsh|ksh|mksh|csh|tcsh|fish|busybox)(?:\s|$)`)
+
+// isShellScript reports whether a file is a shell script, by its extension or
+// by the shebang on its first line.
+func isShellScript(p string, data []byte) bool {
+	name := strings.ToLower(p[strings.LastIndex(p, "/")+1:])
+	for _, ext := range shellExtensions {
+		if strings.HasSuffix(name, ext) {
+			return true
+		}
+	}
+	first, _, _ := bytes.Cut(data, []byte("\n"))
+	return shellShebang.Match(bytes.TrimRight(first, "\r"))
 }
 
 // scanBinary scans the text embedded in a binary file. Every byte outside

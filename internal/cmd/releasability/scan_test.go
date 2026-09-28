@@ -131,6 +131,11 @@ func TestScanTextContextHostFindings(t *testing.T) {
 		"  HostName atlas",
 		"hostname: atlas",
 		`server = "atlas"`,
+		`"host": "atlas"`,
+		`{"hostname":"atlas","port":22}`,
+		`  "server" : "atlas",`,
+		`'host': atlas`,
+		`"HostName": "Atlas"`,
 		"ping atlas",
 		"ssh -o BatchMode=yes -o ConnectTimeout=5 -i key atlas",
 		"ssh -o BatchMode=yes -o ConnectTimeout=5 -o StrictHostKeyChecking=no -p 2222 -i key -l root -v atlas uptime",
@@ -165,6 +170,7 @@ func TestScanTextContextHostClean(t *testing.T) {
 		"/srv/atlas:/data and x.atlas:22",
 		"git push atlas main",
 		"host atlas-dev",
+		`"hostname": "atlas.com", "atlas": "host"`,
 		"ssh othernode and ssh atlas_x",
 		"ping it; atlas rocks",
 		"ssh a b c d e f atlas",
@@ -206,7 +212,28 @@ func TestScanReadsSymlinkTargetsWithoutFollowing(t *testing.T) {
 	}
 }
 
-func TestScanReadsBinaryText(t *testing.T) {
+func TestScanFailsClosedOnBinaryAndOversize(t *testing.T) {
+	big := strings.Repeat("clean text\n", MaxFileSize/10)
+	fsys := fstest.MapFS{
+		"bin":     {Data: []byte("\x00\x01clean bytes\xff")},
+		"big.txt": {Data: []byte(big)},
+		"a.txt":   {Data: []byte("x " + labIPv4)},
+	}
+	got, err := Scan(fsys, []string{"bin", "big.txt", "gone.txt", "a.txt"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Finding{
+		{Path: "bin", Kind: KindUnreadable, Match: "binary file"},
+		{Path: "big.txt", Kind: KindUnreadable, Match: fmt.Sprintf("over %d bytes", MaxFileSize)},
+		{Path: "a.txt", Line: 1, Kind: KindLabAddress, Match: labIPv4},
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("got %+v, want %+v", got, want)
+	}
+}
+
+func TestScanReadsExemptFiles(t *testing.T) {
 	withContextHost(t, "atlas")
 	utf16 := func(s string) string {
 		var b strings.Builder
@@ -216,15 +243,24 @@ func TestScanReadsBinaryText(t *testing.T) {
 		}
 		return b.String()
 	}
+	big := strings.Repeat("clean text\n", MaxFileSize/10) + "tail " + labIPv4 + "\n"
+	exempt := "# releasability exemptions\n\n" +
+		"bin compiled fixture\n" +
+		"path\tfixture with a tab-separated reason\n" +
+		"wide UTF-16 fixture\n" +
+		"joined fixture\n" +
+		"clean fixture\n" +
+		"big.txt generated corpus\n"
 	fsys := fstest.MapFS{
-		"bin":    {Data: []byte("\x00\x01" + labIPv4 + "\xff\x00")},
-		"path":   {Data: []byte("\x00\x02\n\x03" + ownerPath + "\x00")},
-		"wide":   {Data: []byte("\xff\xfe" + utf16("ssh atlas"))},
-		"joined": {Data: []byte("\x00ssh\x01atlas\x00")},
-		"clean":  {Data: []byte("\x00\x01clean bytes\xff")},
-		"a.txt":  {Data: []byte("x " + labIPv4)},
+		ExemptFile: {Data: []byte(exempt)},
+		"bin":      {Data: []byte("\x00\x01" + labIPv4 + "\xff\x00")},
+		"path":     {Data: []byte("\x00\x02\n\x03" + ownerPath + "\x00")},
+		"wide":     {Data: []byte("\xff\xfe" + utf16("ssh atlas"))},
+		"joined":   {Data: []byte("\x00ssh\x01atlas\x00")},
+		"clean":    {Data: []byte("\x00\x01clean bytes\xff")},
+		"big.txt":  {Data: []byte(big)},
 	}
-	got, err := Scan(fsys, []string{"bin", "path", "wide", "joined", "clean", "gone.txt", "a.txt"})
+	got, err := Scan(fsys, []string{ExemptFile, "bin", "path", "wide", "joined", "clean", "big.txt"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -232,10 +268,83 @@ func TestScanReadsBinaryText(t *testing.T) {
 		{Path: "bin", Line: 1, Kind: KindLabAddress, Match: labIPv4},
 		{Path: "path", Line: 2, Kind: KindOwnerPath, Match: "/" + "home/someone"},
 		{Path: "wide", Line: 1, Kind: KindFleetHost, Match: "atlas"},
-		{Path: "a.txt", Line: 1, Kind: KindLabAddress, Match: labIPv4},
+		{Path: "big.txt", Line: strings.Count(big, "\n"), Kind: KindLabAddress, Match: labIPv4},
 	}
 	if fmt.Sprint(got) != fmt.Sprint(want) {
 		t.Fatalf("got %+v, want %+v", got, want)
+	}
+}
+
+func TestScanIgnoresUntrackedExemptFile(t *testing.T) {
+	fsys := fstest.MapFS{
+		ExemptFile: {Data: []byte("bin local edit\n")},
+		"bin":      {Data: []byte("\x00")},
+	}
+	got, err := Scan(fsys, []string{"bin"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Finding{{Path: "bin", Kind: KindUnreadable, Match: "binary file"}}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("got %+v, want %+v", got, want)
+	}
+}
+
+func TestScanRejectsBadExemptions(t *testing.T) {
+	for _, tc := range []struct{ list, reason string }{
+		{"bin\n", "bin has no reason"},
+		{"# c\nbin   \n", "bin has no reason"},
+		{"gone.bin old fixture\n", "gone.bin is not a tracked file"},
+	} {
+		fsys := fstest.MapFS{
+			ExemptFile: {Data: []byte(tc.list)},
+			"bin":      {Data: []byte("\x00")},
+		}
+		_, err := Scan(fsys, []string{ExemptFile, "bin"})
+		var ee *ExemptError
+		if !errors.As(err, &ee) || ee.Reason != tc.reason {
+			t.Errorf("%q: err = %v, want *ExemptError %q", tc.list, err, tc.reason)
+			continue
+		}
+		if !strings.HasPrefix(ee.Error(), "releasability: "+ExemptFile+":") {
+			t.Errorf("message %q", ee.Error())
+		}
+	}
+}
+
+func TestScanForbidsShellScriptsAndAgentFiles(t *testing.T) {
+	fsys := fstest.MapFS{
+		"scripts/build.sh":    {Data: []byte("echo hi\n")},
+		"tools/RUN.BASH":      {Data: []byte("echo hi\n")},
+		"bin/release":         {Data: []byte("#!/bin/sh\nset -e\n")},
+		"bin/envbash":         {Data: []byte("#!/usr/bin/env bash\r\n")},
+		"bin/envs":            {Data: []byte("#! /usr/bin/env -S zsh -e\n")},
+		"bin/tool.py":         {Data: []byte("#!/usr/bin/env python3\n")},
+		".claude/agents/x.md": {Data: []byte("x\n")},
+		"sub/.serena/p.yml":   {Data: []byte("x\n")},
+		"CLAUDE.md":           {Data: []byte("x\n")},
+		"docs/CLAUDE.md":      {Data: []byte("x\n")},
+		"docs/claude.go":      {Data: []byte("package docs\n")},
+	}
+	paths := []string{
+		"scripts/build.sh", "tools/RUN.BASH", "bin/release", "bin/envbash", "bin/envs",
+		"bin/tool.py", ".claude/agents/x.md", "sub/.serena/p.yml", "CLAUDE.md",
+		"docs/CLAUDE.md", "docs/claude.go", ".claude/deleted.md",
+	}
+	got, err := Scan(fsys, paths)
+	if err != nil {
+		t.Fatal(err)
+	}
+	shell := func(p string) Finding { return Finding{Path: p, Kind: KindForbiddenFile, Match: "shell script"} }
+	agent := func(p string) Finding { return Finding{Path: p, Kind: KindForbiddenFile, Match: "agent context"} }
+	want := []Finding{
+		shell("scripts/build.sh"), shell("tools/RUN.BASH"), shell("bin/release"),
+		shell("bin/envbash"), shell("bin/envs"),
+		agent(".claude/agents/x.md"), agent("sub/.serena/p.yml"), agent("CLAUDE.md"),
+		agent("docs/CLAUDE.md"), agent(".claude/deleted.md"),
+	}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("got %+v\nwant %+v", got, want)
 	}
 }
 
@@ -338,6 +447,27 @@ func TestRunFailsOnPlantedLabAddress(t *testing.T) {
 	}
 	if !strings.Contains(errOut.String(), "1 finding(s)") {
 		t.Fatalf("stderr %q", errOut.String())
+	}
+}
+
+func TestRunFailsOnUnexemptBinary(t *testing.T) {
+	dir := gitRepo(t, map[string]string{"README.md": "# ok\n", "blob.bin": "\x00\x01"})
+	var out, errOut bytes.Buffer
+	if code := run([]string{"-C", dir}, &out, &errOut); code != exitFindings {
+		t.Fatalf("exit %d, want %d\nstdout:\n%s", code, exitFindings, out.String())
+	}
+	if want := "blob.bin: unreadable file: binary file\n"; out.String() != want {
+		t.Fatalf("stdout %q, want %q", out.String(), want)
+	}
+
+	dir = gitRepo(t, map[string]string{
+		"README.md": "# ok\n",
+		"blob.bin":  "\x00\x01",
+		ExemptFile:  "blob.bin test fixture\n",
+	})
+	out.Reset()
+	if code := run([]string{"-C", dir}, &out, &errOut); code != exitClean {
+		t.Fatalf("exempt: exit %d\nstdout:\n%s", code, out.String())
 	}
 }
 
