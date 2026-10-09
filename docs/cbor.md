@@ -1,5 +1,8 @@
 # CBOR Codec
 
+> **Status: REFERENCE** · Last verified: 2026-10-09
+> As-built usage of the CBOR codec in `pkg/cbor/`. The code is authoritative.
+
 CBOR (Concise Binary Object Representation) is a compact binary data format.
 
 ## Import

@@ -1,5 +1,8 @@
 # JSON Codec
 
+> **Status: REFERENCE** · Last verified: 2026-10-09
+> As-built usage of the JSON codec in `pkg/json/`. The code is authoritative.
+
 JSON (JavaScript Object Notation) is a lightweight text-based data format.
 
 ## Import

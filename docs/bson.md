@@ -1,5 +1,8 @@
 # BSON Codec
 
+> **Status: REFERENCE** · Last verified: 2026-10-09
+> As-built usage of the BSON codec in `pkg/bson/`. The code is authoritative.
+
 BSON (Binary JSON) is the binary format used by MongoDB.
 
 ## Import

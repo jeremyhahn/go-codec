@@ -1,5 +1,8 @@
 # YAML Codec
 
+> **Status: REFERENCE** · Last verified: 2026-10-09
+> As-built usage of the YAML codec in `pkg/yaml/`. The code is authoritative.
+
 YAML (YAML Ain't Markup Language) is a human-readable data serialization format.
 
 ## Import

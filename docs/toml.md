@@ -1,5 +1,8 @@
 # TOML Codec
 
+> **Status: REFERENCE** · Last verified: 2026-10-09
+> As-built usage of the TOML codec in `pkg/toml/`. The code is authoritative.
+
 TOML (Tom's Obvious, Minimal Language) is a configuration file format.
 
 ## Import

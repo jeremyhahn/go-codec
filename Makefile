@@ -220,6 +220,10 @@ lint:
 		(echo "golangci-lint not installed. Install with: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $$(go env GOPATH)/bin" && exit 1)
 	@(which golangci-lint > /dev/null && golangci-lint run --timeout=5m ./...) || \
 		$$(go env GOPATH)/bin/golangci-lint run --timeout=5m ./...
+	@echo "Running actionlint..."
+	@AL=$$(command -v actionlint 2>/dev/null || { test -x $$(go env GOPATH)/bin/actionlint && echo $$(go env GOPATH)/bin/actionlint; }); \
+	test -n "$$AL" || { echo "ERROR: actionlint not installed. Install with: go install github.com/rhysd/actionlint/cmd/actionlint@latest"; exit 1; }; \
+	"$$AL" .github/workflows/*.yml
 
 # Security scanning — the full devops.md §8 suite.
 # gosec, govulncheck, go mod verify, trivy fs, trivy image.
@@ -271,8 +275,8 @@ modverify:
 .PHONY: trivy
 trivy:
 	@command -v trivy >/dev/null 2>&1 || { \
-		echo "trivy not installed - skipping filesystem scan (see https://trivy.dev/latest/getting-started/installation/)"; \
-		exit 0; \
+		echo "ERROR: trivy not installed - cannot run filesystem scan. Install: https://trivy.dev/latest/getting-started/installation/"; \
+		exit 1; \
 	}; \
 	echo "Running trivy filesystem scan..."; \
 	trivy fs --scanners vuln,secret --severity CRITICAL,HIGH --exit-code 1 --skip-dirs examples .
@@ -301,8 +305,8 @@ trivy:
 # and govulncheck.
 .PHONY: trivy-image
 trivy-image:
-	@command -v docker >/dev/null 2>&1 || { echo "docker not installed - skipping image scan"; exit 0; }; \
-	command -v trivy >/dev/null 2>&1 || { echo "trivy not installed - skipping image scan"; exit 0; }; \
+	@command -v docker >/dev/null 2>&1 || { echo "ERROR: docker not installed - cannot run image scan"; exit 1; }; \
+	command -v trivy >/dev/null 2>&1 || { echo "ERROR: trivy not installed - cannot run image scan. Install: https://trivy.dev/latest/getting-started/installation/"; exit 1; }; \
 	echo "Building and scanning container image..."; \
 	docker build --pull -t go-codec:security . && \
 	trivy image --scanners vuln,secret --severity CRITICAL,HIGH --ignore-unfixed --exit-code 1 \

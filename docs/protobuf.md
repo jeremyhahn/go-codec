@@ -1,15 +1,20 @@
 # Protocol Buffers Codec
 
+> **Status: REFERENCE** · Last verified: 2026-10-09
+> As-built usage of the Protocol Buffers codec in `pkg/protobuf/`. The code is authoritative.
+
 Protocol Buffers (protobuf) is Google's binary serialization format.
 
 ## Import
 
 ```go
-import "github.com/jeremyhahn/go-codec/pkg/factory"
+import "github.com/jeremyhahn/go-codec/pkg/protobuf"
 ```
 
 Importing the package registers the codec in `init()`; no build tags are
 needed. Import only the codec packages you use: Go links just those.
+`pkg/factory` links and registers all seven codecs; use it only when you
+need every format.
 
 ## Usage
 
@@ -38,21 +43,21 @@ protoc --go_out=. --go_opt=paths=source_relative user.proto
 **3. Use the codec:**
 
 ```go
-codec := factory.NewProtoBuf[*User]()
+codec := protobuf.New[*User]()
 
 user := &User{Id: 1, Name: "John", Email: "john@example.com"}
 
 data, err := codec.Marshal(user)
+
+result := &User{} // must be non-nil: Unmarshal fills the message it points to
 err = codec.Unmarshal(data, &result)
 ```
 
-## Direct Package Import
+## Factory
 
-```go
-import "github.com/jeremyhahn/go-codec/pkg/protobuf"
-
-codec := protobuf.New[*User]()
-```
+`factory.NewProtoBuf[*User]()` (`pkg/factory/factory.go:60`) returns the same
+codec as `(codec.Codec[*User], error)`. The error is always nil.
+`factory.New` rejects `codec.ProtoBuf` with an error; use `NewProtoBuf`.
 
 ## Performance
 
@@ -65,7 +70,7 @@ codec := protobuf.New[*User]()
 
 - Uses `google.golang.org/protobuf`
 - Requires code generation from `.proto` files
-- Type must implement `proto.Message`
-- Fastest serialization format
+- Type must satisfy `protobuf.ProtoMessage` (`proto.Message`)
+- Fastest of the formats benchmarked in this directory
 - Ideal for RPC and microservices
 - Schema evolution with backward compatibility

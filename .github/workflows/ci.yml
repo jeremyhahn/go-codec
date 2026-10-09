@@ -101,26 +101,26 @@ jobs:
           echo "mode: set" > coverage.out
           for pkg in pkg/bson pkg/cbor pkg/factory pkg/json pkg/msgpack pkg/pool pkg/protobuf pkg/toml pkg/yaml; do
             echo "Testing $pkg..."
-            go test -v -race -coverprofile=coverage-$(basename $pkg).out ./$pkg
-            tail -n +2 coverage-$(basename $pkg).out >> coverage.out
+            go test -v -race -coverprofile="coverage-$(basename "$pkg").out" "./$pkg"
+            tail -n +2 "coverage-$(basename "$pkg").out" >> coverage.out
           done
 
       - name: Calculate coverage
         id: coverage
         run: |
           COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
-          echo "coverage=${COVERAGE}" >> $GITHUB_OUTPUT
+          echo "coverage=${COVERAGE}" >> "$GITHUB_OUTPUT"
           echo "Total coverage: ${COVERAGE}%"
 
       - name: Check coverage threshold
         run: |
           COVERAGE=${{ steps.coverage.outputs.coverage }}
           COVERAGE_INT=$(echo "${COVERAGE}" | awk '{printf "%d", $1}')
-          if [ "${COVERAGE_INT}" -lt "${{ env.COVERAGE_THRESHOLD }}" ]; then
-            echo "Coverage ${COVERAGE}% is below threshold ${{ env.COVERAGE_THRESHOLD }}%"
+          if [ "${COVERAGE_INT}" -lt "${COVERAGE_THRESHOLD}" ]; then
+            echo "Coverage ${COVERAGE}% is below threshold ${COVERAGE_THRESHOLD}%"
             exit 1
           else
-            echo "Coverage ${COVERAGE}% meets threshold ${{ env.COVERAGE_THRESHOLD }}%"
+            echo "Coverage ${COVERAGE}% meets threshold ${COVERAGE_THRESHOLD}%"
           fi
 
       - name: Upload coverage to Codecov

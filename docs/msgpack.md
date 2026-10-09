@@ -1,5 +1,8 @@
 # MessagePack Codec
 
+> **Status: REFERENCE** · Last verified: 2026-10-09
+> As-built usage of the MessagePack codec in `pkg/msgpack/`. The code is authoritative.
+
 MessagePack is an efficient binary serialization format.
 
 ## Import
@@ -60,6 +63,6 @@ for _, item := range items {
 ## Notes
 
 - Uses `github.com/vmihailenco/msgpack/v5`
-- More compact than JSON (~30-50% smaller)
-- Faster unmarshaling than JSON
+- Binary encoding, typically smaller than JSON
+- Unmarshal is faster than JSON in the tables here and in `docs/json.md`
 - Good for network protocols and caching
