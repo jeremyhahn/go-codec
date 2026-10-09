@@ -11,13 +11,13 @@ Gives every consuming project consistent encoding with no in-house dependencies.
 
 ## Current milestone
 
-[Release candidate (M2)](http://git.example.internal/jeremyhahn/go-codec/milestone/2), target kind RC.
+[Release candidate (M2)](../../milestone/2), target kind RC.
 Projected: 2026-10-11.
 
 ## Now
 
-- [#26](http://git.example.internal/jeremyhahn/go-codec/issues/26) public release readiness landed via PR #29 — in review
-- [#33](http://git.example.internal/jeremyhahn/go-codec/issues/33) docs carry index, status banners and stamps — open
+- [#26](../../issues/26) public release readiness landed via PR #29 — in review
+- [#33](../../issues/33) docs carry index, status banners and stamps — open
 - readiness: merge readiness PR #29 — in review
 - readiness: CI green on main — done
 
