@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- ci: gosec v2.30.0, which loads Go 1.27 export data
+
 ## [1.5.0-alpha] - 2026-10-09
 
 ### Changed — untagged builds now work: the import is the opt-in (#11)
