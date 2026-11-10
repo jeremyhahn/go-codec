@@ -210,6 +210,27 @@ jobs:
           version: latest
           args: --timeout=5m
 
+  # Job 2b: Public releasability (go-codec#26). The published GitHub tree is
+  # byte-identical to the Gitea tag (version-control.md §5a), so a lab address,
+  # fleet hostname or owner path in a tracked file must fail here, in the
+  # source, before any tag is cut. Needs no protoc: it reads files only.
+  releasability:
+    name: Releasability
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Public-releasability gate
+        run: make releasability
+
   # Job 3: Security Scanning
   security:
     name: Security Scan
@@ -483,7 +504,7 @@ jobs:
     name: CI Gate
     runs-on: ubuntu-latest
     if: always()
-    needs: [test, lint, security, trivy, trivy-image, build, race, benchmark, fips]
+    needs: [test, lint, releasability, security, trivy, trivy-image, build, race, benchmark, fips]
 
     steps:
       - name: Fail closed on any non-success
@@ -492,6 +513,7 @@ jobs:
           BAD=0
           check test        "${{ needs.test.result }}"
           check lint        "${{ needs.lint.result }}"
+          check releasability "${{ needs.releasability.result }}"
           check security    "${{ needs.security.result }}"
           check trivy       "${{ needs.trivy.result }}"
           check trivy-image "${{ needs.trivy-image.result }}"

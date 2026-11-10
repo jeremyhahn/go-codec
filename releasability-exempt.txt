@@ -1,0 +1,7 @@
+# Tracked files the public-releasability gate may not read as text but that
+# still ship (internal/cmd/releasability, go-codec#26). The gate fails on a
+# tracked binary file (a NUL byte in its first 8000 bytes) or a file over
+# 1 MiB unless it is listed here.
+#
+# One entry per line: the tracked path, whitespace, then a one-line reason.
+# An entry with no reason, or for a path that is not tracked, fails the gate.
