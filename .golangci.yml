@@ -1,8 +1,4 @@
-# golangci-lint v2 configuration for go-codec.
-#
-# conventions/devops.md §8 requires staticcheck, errcheck, unused, ineffassign,
-# misspell and gocritic to be enabled here — installing the umbrella with the
-# security linters off does not satisfy that section.
+# golangci-lint v2 configuration; staticcheck, errcheck, unused, ineffassign, misspell and gocritic are required.
 version: "2"
 
 run:
@@ -36,10 +32,7 @@ linters:
 
     gosec:
       excludes:
-        # The zero-copy paths in pkg/msgpack and pkg/protobuf convert between
-        # []byte and string through unsafe with the lifetime of the backing
-        # array held by the caller. Audited; the same exclusion is applied to
-        # the gosec invocation in the Makefile and ci.yml.
+        # Audited zero-copy []byte/string conversions in pkg/msgpack and pkg/protobuf; gosec in the Makefile and ci.yml excludes the same.
         - G103
 
     misspell:
@@ -73,10 +66,7 @@ linters:
           - gocritic
           - gosec
 
-# goimports is deliberately NOT enabled as a formatter: the tree groups the
-# `codec "github.com/jeremyhahn/go-codec"` self-import with the third-party
-# block, which goimports' local-prefix grouping would rewrite across every
-# codec package. gofmt is the formatting gate here and in `make fmt-check`.
+# goimports is not enabled: its local-prefix grouping would rewrite the codec self-import in every package; gofmt is the format gate.
 formatters:
   enable:
     - gofmt

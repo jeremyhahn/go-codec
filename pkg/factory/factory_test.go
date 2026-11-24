@@ -221,8 +221,7 @@ func TestNew_EncodeDecodeStream(t *testing.T) {
 }
 
 func TestSupportedCodecs(t *testing.T) {
-	// Importing pkg/factory imports every codec package, so all seven codecs
-	// must be registered in an untagged build.
+	// Importing pkg/factory registers all seven codecs.
 	supported := codec.SupportedCodecs()
 
 	for _, want := range []codec.Type{codec.JSON, codec.YAML, codec.TOML, codec.MsgPack, codec.BSON, codec.CBOR, codec.ProtoBuf} {
@@ -243,8 +242,7 @@ func TestSupportedCodecs(t *testing.T) {
 }
 
 func TestNew_RegisteredButUnhandledCodec(t *testing.T) {
-	// This test covers the default case in the switch statement.
-	// We register a custom codec type that isn't handled in the factory switch.
+	// Register a codec type the factory switch does not handle to reach its default case.
 	customCodec := codec.Type("custom_test_codec")
 
 	// Register the custom codec (simulating a new codec being added)
