@@ -18,8 +18,7 @@ func main() {
 	fmt.Println("=== Protocol Buffers Codec Demo ===")
 	fmt.Println()
 
-	// Create a Protocol Buffers codec
-	// Note: Must use factory.NewProtoBuf instead of factory.New for protobuf types
+	// Protocol Buffers needs factory.NewProtoBuf, not factory.New.
 	protobufCodec, err := factory.NewProtoBuf[*Person]()
 	if err != nil {
 		log.Fatalf("Failed to create protobuf codec: %v", err)

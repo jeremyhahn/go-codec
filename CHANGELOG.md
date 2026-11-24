@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed — untagged builds now work: the import is the opt-in (#11)
 
-- **Codec build tags removed** (owner ruling 2026-09-22). Every codec package
+- **Codec build tags removed**. Every codec package
   (`pkg/json`, `pkg/yaml`, `pkg/toml`, `pkg/msgpack`, `pkg/bson`, `pkg/cbor`,
   `pkg/protobuf`) now always compiles its real implementation and registers
   itself in `init()` when imported, like `database/sql` drivers. Previously a
@@ -94,7 +94,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed — BREAKING: the Avro codec is gone
 
-- **Avro codec removed entirely** (2026-08-14, owner decision): the `pkg/avro`
+- **Avro codec removed entirely**: the `pkg/avro`
   package, the `codec.Avro` type constant, the `codec_avro` build tag and
   `WITH_CODEC_AVRO` Makefile variable, `docs/avro.md`, and the
   `github.com/hamba/avro/v2` dependency.
@@ -122,7 +122,7 @@ follows. Under Go's semantic import versioning a major bump would also require
 the module path to become `github.com/jeremyhahn/go-codec/v2`, changing every
 import line in every consumer.
 
-This release is **1.4.0 instead of 2.0.0**, by owner decision on 2026-08-14, on
+This release is **1.4.0 instead of 2.0.0**, on
 two grounds: no consumer used the removed API — every dependent pinned
 `go-codec v1.3.1` and none imported `pkg/avro` or referenced `codec.Avro`, so
 real-world breakage is zero — and the module is pre-publication, with no
