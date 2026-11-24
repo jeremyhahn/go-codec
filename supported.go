@@ -11,7 +11,10 @@ var (
 	codecMu         sync.RWMutex
 )
 
-// RegisterCodec registers a codec as supported; each codec package calls it from init.
+// RegisterCodec registers a codec as supported. Each codec package calls it
+// from its init function, so a codec is registered exactly when the program
+// imports its package (the database/sql driver pattern). No build tag is
+// involved.
 func RegisterCodec(t Type) {
 	codecMu.Lock()
 	defer codecMu.Unlock()

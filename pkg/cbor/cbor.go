@@ -36,18 +36,35 @@ func (e *OptionsError) Unwrap() error { return e.Err }
 // Is reports whether target is ErrInvalidOptions.
 func (e *OptionsError) Is(target error) bool { return target == ErrInvalidOptions }
 
-// Codec implements codec.Codec for CBOR with default or caller-supplied options.
+// Codec implements the codec.Codec interface for CBOR serialization.
+//
+// A Codec from New uses fxamacker/cbor's default options. A Codec from
+// NewWithOptions uses the decode and encode modes built from the caller's
+// options.
 type Codec[T any] struct {
 	dm cbor.DecMode
 	em cbor.EncMode
 }
 
-// New creates a CBOR codec with fxamacker/cbor's lenient defaults; use NewWithOptions for attacker-controlled input.
+// New creates a new CBOR codec using fxamacker/cbor's default options.
+//
+// The defaults are lenient: duplicate map keys are accepted, and which value
+// is retained depends on the destination type; indefinite-length items and
+// tags are accepted. Use NewWithOptions to
+// decode attacker-controlled input.
 func New[T any]() *Codec[T] {
 	return &Codec[T]{}
 }
 
-// NewWithOptions creates a CBOR codec from dec and enc, returning *OptionsError for invalid options; for untrusted input enforce DupMapKey, IndefLength, UTF8, MaxNestedLevels and TagsMd.
+// NewWithOptions creates a CBOR codec whose decoding and encoding are governed
+// by dec and enc. The modes are built once here; invalid options return an
+// *OptionsError and a nil codec, so a misconfigured codec never reaches input.
+//
+// For attacker-reachable input, set at least DupMapKey to
+// cbor.DupMapKeyEnforcedAPF, IndefLength to cbor.IndefLengthForbidden,
+// UTF8 to cbor.UTF8RejectInvalid, MaxNestedLevels to a caller-chosen bound,
+// and TagsMd to cbor.TagsForbidden where the container already identifies
+// the content.
 func NewWithOptions[T any](dec cbor.DecOptions, enc cbor.EncOptions) (*Codec[T], error) {
 	dm, err := dec.DecMode()
 	if err != nil {
