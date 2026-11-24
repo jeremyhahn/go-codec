@@ -1,15 +1,6 @@
-# Makefile for go-codec
-#
-# This Makefile uses dynamic package discovery and templates for all targets.
-# All packages in pkg/ are automatically included.
+# Makefile for go-codec; every package under pkg/ is discovered automatically.
 
-# ==============================================================================
-# Codec Selection
-# ==============================================================================
-# There are no codec build tags. Each codec package (pkg/json, pkg/yaml, ...)
-# always compiles its real implementation and registers itself in init() when
-# a program imports it, so the import is the opt-in. Every target below builds
-# and tests with no -tags.
+# No codec build tags: importing a codec package registers it, so every target builds without -tags.
 
 # ==============================================================================
 # Package Discovery
@@ -232,23 +223,11 @@ security: gosec vuln modverify trivy trivy-image
 	@echo ""
 	@echo "Security suite passed"
 
-# gosec + govulncheck. Kept as its own target so `make security` composes it
-# with the trivy scans below rather than duplicating the invocations.
-#
-# GOSEC_FLAGS stays identical to the gosec step in .github/workflows/ci.yml --
-# devops.md §8 makes `make security` the contract CI runs, so the two drifting
-# apart means a developer's "clean" run proves nothing. No -tags: every codec
-# implementation compiles unconditionally, so the scanners see all of it.
-# No -exclude rules: the only unsafe usage in the tree is in protoc-generated
-# *.pb.go, which -exclude-generated already drops, so a blanket -exclude=G103
-# would buy nothing and hide hand-written unsafe if any ever landed.
+# gosec and govulncheck; GOSEC_FLAGS must match the gosec step in ci.yml, with no -exclude rules.
 GOSEC_FLAGS := -exclude-generated -severity medium -confidence medium \
 	-exclude-dir=testdata
 
-# Each target resolves the binary once and runs it once. The previous
-# `(which tool && tool ...) || $(GOPATH)/bin/tool ...` form treated a scanner
-# that ran and *found something* as "not on PATH" and scanned the whole tree a
-# second time, doubling the output of every real failure.
+# Each target resolves the binary once and runs it once.
 .PHONY: gosec vuln
 gosec:
 	@echo "Running security scan with gosec..."
@@ -270,8 +249,7 @@ modverify:
 	@echo "Verifying module integrity..."
 	@go mod verify
 
-# Filesystem CVE/secret scan, gated on CRITICAL/HIGH. examples/ is skipped:
-# it is demo code that never ships to a consumer of the library.
+# Filesystem CVE/secret scan gated on CRITICAL/HIGH; examples/ never ships and is skipped.
 .PHONY: trivy
 trivy:
 	@command -v trivy >/dev/null 2>&1 || { \
@@ -281,28 +259,7 @@ trivy:
 	echo "Running trivy filesystem scan..."; \
 	trivy fs --scanners vuln,secret --severity CRITICAL,HIGH --exit-code 1 --skip-dirs examples .
 
-# Image scan of the only container this repo builds: the local development /
-# CI-tooling image (golang:<stable>-bookworm + protoc + the linters), which
-# `make ci` builds, runs `make ci-local` inside, and discards. It is never
-# pushed to a registry.
-#
-# Two scoping decisions, both deliberate:
-#
-#   --ignore-unfixed  The Debian package set is upstream's. A CVE with no
-#                     released fix cannot be actioned by rebuilding and would
-#                     pin this gate permanently red; a CVE that HAS a fix
-#                     means the base is stale, which is a real finding.
-#   --skip-dirs       go/bin, go/pkg/mod and usr/local/go hold the upstream
-#                     release builds of golangci-lint/gosec/govulncheck and
-#                     their module cache, baked in only so the container can
-#                     run the checks. Their embedded stdlib version is a
-#                     property of someone else's release build, not of
-#                     go-codec, and gosec's own hardcoded_credentials.go rule
-#                     fixture trips the secret scanner. Nothing under them
-#                     reaches a consumer.
-#
-# Everything go-codec actually ships is gated unconditionally by `make trivy`
-# and govulncheck.
+# Scan the local development image (never pushed): --ignore-unfixed for unfixable base CVEs, --skip-dirs for upstream tool builds and their module cache.
 .PHONY: trivy-image
 trivy-image:
 	@command -v docker >/dev/null 2>&1 || { echo "ERROR: docker not installed - cannot run image scan"; exit 1; }; \
@@ -536,61 +493,21 @@ help:
 	@echo "  make clean-prof              - Clean only profiling files"
 
 SUBMODULE_TAGS := 
-# Builds never resolve through a workspace: modules come from Gitea tags
-# (dependency-resolution.md §2). Immunizes against stray go.work files.
+# Builds never resolve through a workspace.
 export GOWORK=off
 
-# ---- dependency-resolution.md targets (2026-08-13 cutover) ----
-# SUBMODULE_TAGS lists nested modules tagged in lockstep with the root
-# (release-versioning.md P2). deps-latest runs before compiling in a
-# consumer repo; release-alpha (below) cuts an explicitly named -alpha tag.
-# deps-latest picks the highest tag INCLUDING -alpha prereleases — bare
-# 'go get @latest' ignores prereleases and would downgrade to legacy v0.0.0.
+# SUBMODULE_TAGS lists nested modules tagged in lockstep; deps-latest picks the highest tag including -alpha prereleases.
 
 .PHONY: deps-latest
 
-# ---- release-alpha: handbook software/templates/make/release-alpha.mk v2.3.9,
-# adopted verbatim (go-codec #10) with ONE deviation: the VERSION grammar guard
-# also rejects a value containing a newline. grep is line-oriented, so v2.3.9
-# accepts "vX.Y.Z-alpha" followed by a newline and anything else; the same
-# guard in release-alpha-changelog would then commit a multiline heading and
-# delete the fragments before the CHANGELOG guard refused. Report upstream.
-# Usage: make release-alpha VERSION=vX.Y.Z-alpha
-# SUBMODULE_TAGS is empty, so there are no lockstep tags. The one prerequisite
-# is release-alpha-changelog, below.
-# agent-git.sh is resolved from PATH (template v2.3.6: never bake a path in).
-# It becomes an absolute path here because the recipe's `test -x` guard does
-# not search PATH, and it is simply-expanded because the recipe reads it with
-# $(value ...). Pure Make functions only, deliberately: under GNU Make 4.4 a
-# parse-time $(shell ...) builds an exported environment BEFORE the template's
-# `unexport` line is read, which expands command-line variables and re-opens
-# the injection v2.3.7/v2.3.8 closed (measured: RELEASE_REMOTE, REL_REMOTE
-# canaries fired). $(value PATH) keeps PATH itself unexpanded. Not found =>
-# empty => the recipe fails closed before VERSION is written.
-# Override: make release-alpha VERSION=vX.Y.Z-alpha AGENT_GIT=/path/agent-git.sh
+# release-alpha: the handbook template, plus a guard rejecting a VERSION with a newline. Usage: make release-alpha VERSION=vX.Y.Z-alpha [AGENT_GIT=/path/agent-git.sh]; AGENT_GIT resolves from PATH with pure Make functions.
 ifeq ($(origin AGENT_GIT),undefined)
 AGENT_GIT := $(firstword $(wildcard $(addsuffix /agent-git.sh,$(subst :, ,$(value PATH)))))
 endif
 REPO_NAME ?= go-codec
 RELEASE_REMOTE ?= origin
 
-# ---- release-alpha-changelog: the changelog assembly release-versioning.md §5
-# requires as "a committed step performed before tagging". PRs add
-# changelog.d/<issue>-<slug>.md; this folds [Unreleased] and every fragment into
-# a "## [X.Y.Z-alpha] - <date>" section (scripts/assemble-changelog.sh), deletes
-# the fragments and commits both through agent-git.sh. The template recipe then
-# re-runs its guards, finds the heading, commits VERSION, tags, and pushes HEAD —
-# which carries this commit too — in one atomic push.
-#
-# It runs as a PREREQUISITE so the template body below stays verbatim (bar the
-# newline guard noted above). It reads only the REL_* values release-alpha
-# sanitises (target-specific variables are inherited by prerequisites; see the
-# template's v2.3.3/v2.3.7/v2.3.8 notes), so
-# run on its own it has no version and refuses. Its guards repeat the template's
-# pre-write guards on purpose: this step commits, so everything that can refuse
-# the release must refuse BEFORE it, or a refused release leaves a changelog
-# commit on main. Nothing pending => no commit, and the template's CHANGELOG
-# guard decides. Tests: internal/releasetest.
+# release-alpha-changelog folds Unreleased and changelog.d/ into the version's section and commits it before tagging; it repeats the template's pre-write guards. Tests: internal/releasetest.
 .PHONY: release-alpha-changelog
 release-alpha: release-alpha-changelog
 release-alpha-changelog:

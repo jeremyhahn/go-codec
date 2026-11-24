@@ -18,9 +18,7 @@ const (
 	unreleased  = "## [Unreleased]"
 )
 
-// stubAgentGit stands in for agent-git.sh: it asserts the repo argument,
-// records every call, can be told to fail the release commit, and otherwise
-// runs plain git (signing is agent-git.sh's contract, not the recipe's).
+// stubAgentGit stands in for agent-git.sh: it checks the repo argument, records calls, can fail the release commit, and otherwise runs git.
 const stubAgentGit = `#!/bin/sh
 [ "$1" = go-codec ] || { echo "stub agent-git.sh: called for repo '$1', want go-codec" >&2; exit 97; }
 shift
@@ -228,8 +226,7 @@ func (f *fixture) expectRefused(out string, ok bool, reason string) {
 	}
 }
 
-// expectReleased asserts exactly testVersion was published, annotated, on the
-// release commit, with remote main level with it and VERSION unprefixed.
+// expectReleased asserts testVersion was published, annotated, on the release commit, with main level and VERSION unprefixed.
 func (f *fixture) expectReleased(out string, ok bool) {
 	f.t.Helper()
 	if !ok {
@@ -283,11 +280,7 @@ func TestReleaseAlphaRejectsMalformedVersion(t *testing.T) {
 	}
 }
 
-// grep is line-oriented, so a VERSION of a valid first line plus a newline and
-// more text would pass a grep-only grammar check. With entries pending, the
-// changelog step would then commit a multiline heading and delete the
-// fragments before any later guard refused. Both version guards must reject
-// it before anything is written.
+// Both version guards must reject a VERSION containing a newline before anything is written.
 func TestReleaseAlphaRejectsMultilineVersion(t *testing.T) {
 	const changelog = "# Changelog\n\n" + unreleased + "\n\n- pending unreleased entry\n"
 	for name, v := range map[string]string{
@@ -348,8 +341,7 @@ func TestReleaseAlphaRefusesExistingRemoteTag(t *testing.T) {
 	}
 }
 
-// A failed VERSION commit must stop the release before any tag exists — the v1
-// recipe's `|| true` tagged anyway.
+// A failed VERSION commit must stop the release before any tag exists.
 func TestReleaseAlphaFailedCommitPreventsTagging(t *testing.T) {
 	f := newFixture(t, releasedChangelog, nil)
 	out, ok := f.release([]string{"STUB_FAIL=commit-release"}, "VERSION="+testVersion)

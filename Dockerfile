@@ -1,26 +1,14 @@
-# Dockerfile for go-codec development and examples.
-#
-# alpine-first (owner ruling 2026-08-20, company task #68): alpine is the
-# portfolio's default base — it also removes the Debian OS package set that
-# kept tripping the Trivy Image gate (CVE-2026-34191, libaprutil1) for
-# packages this library never uses. Debian bases require a documented reason
-# (FIPS/OpenSSL builds, glibc-only deps); this image has neither.
+# Development and examples image on alpine.
 FROM golang:1.27.2-alpine
 
-# Build and codegen dependencies (apk, no recommends concept, tiny footprint).
-# `apk upgrade` first: a pinned base tag's baked-in package set goes stale
-# between upstream rebuilds, and `docker build --pull` does not refresh it —
-# the Trivy Image gate then fails on advisories that already have a fix
-# (issue #16: openssl CVE-2026-14456, libcrypto3/libssl3 3.5.7-r0 -> 3.5.8-r0).
+# apk upgrade first so a pinned base picks up fixed packages.
 RUN apk upgrade --no-cache && \
     apk add --no-cache protobuf protobuf-dev make curl git build-base
 
 # Install Go protobuf plugin
 RUN go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 
-# Install golangci-lint — PINNED v2.12.2 (devops.md §9, company task #122:
-# v2.13.0 ships a staticcheck rc whose nilness pass panics). Installed via
-# `go install` (same as CI) — the curl|sh installer fails under busybox sh.
+# golangci-lint pinned at v2.12.2, installed with go install; the curl|sh installer fails under busybox sh.
 RUN go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
 
 # Install security tools

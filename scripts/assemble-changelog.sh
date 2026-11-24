@@ -1,37 +1,5 @@
 #!/bin/sh
-# assemble-changelog.sh — fold the pending changelog into a release section.
-#
-# Usage: assemble-changelog.sh <CHANGELOG.md> <X.Y.Z-alpha> <YYYY-MM-DD> <fragment-dir>
-#
-# release-versioning.md §5: a PR adds changelog.d/<issue>-<slug>.md instead of
-# editing CHANGELOG.md, and the release step folds the fragments into the new
-# version's section as a COMMITTED step before tagging. This script is the file
-# transform only — it touches no git state. `make release-alpha` (the
-# release-alpha-changelog prerequisite) runs it, removes the fragments and
-# commits both through agent-git.sh.
-#
-# Pending entries are everything under "## [Unreleased]" (content written there
-# before fragments were adopted releases normally) followed by every
-# <fragment-dir>/*.md in name order. They become
-#
-#   ## [Unreleased]
-#
-#   ## [X.Y.Z-alpha] - YYYY-MM-DD
-#
-#   <Unreleased content>
-#
-#   <fragments>
-#
-# Headings are recognised only outside fenced code blocks, with the same
-# CommonMark fence rules as the release-alpha CHANGELOG guard.
-#
-# Writes the assembled file to stdout and exits:
-#   0  assembled
-#   3  nothing to assemble: no pending entries (the version's heading may or
-#      may not exist already; release-alpha's own guard decides that)
-#   1  refused, with the reason on stderr: no "## [Unreleased]" heading, an
-#      empty fragment, or the version already has a section while entries are
-#      still pending (releasing then would silently leave them out)
+# Usage: assemble-changelog.sh <CHANGELOG.md> <X.Y.Z-alpha> <YYYY-MM-DD> <fragment-dir>; writes the changelog with Unreleased and fragments folded into the version's section; exit 0 assembled, 3 nothing pending, 1 refused.
 set -eu
 
 die() { printf 'assemble-changelog: %s\n' "$1" >&2; exit 1; }
